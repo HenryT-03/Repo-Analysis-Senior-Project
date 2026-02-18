@@ -1,14 +1,15 @@
 import React from "react";
 import Sidebar from "./Elements/Sidebar";
+import Topbar from "./Elements/TopBar";
+
 
 const Dashboard : React.FC = () => {
     return (
         <div style={styles.root}>
             <Sidebar/>
             <div style={styles.main}>
-                <TopBar/>
+                <Topbar/>
                 <div style={styles.content}>
-                    </div>
                 </div>
             </div>
         </div>
