@@ -1,7 +1,8 @@
 import React from "react";
 import Sidebar from "./Elements/Sidebar";
 import Topbar from "./Elements/TopBar";
-
+import AlertCard from "./Elements/AlertCard";
+import CommitGraph from "./Elements/CommitGraph";
 
 const Dashboard : React.FC = () => {
     return (
@@ -49,5 +50,6 @@ const styles : Record < string,
     };
 
 export default Dashboard;
+
 
 
