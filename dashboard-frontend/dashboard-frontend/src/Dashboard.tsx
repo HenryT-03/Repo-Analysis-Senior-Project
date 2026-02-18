@@ -8,8 +8,10 @@ const Dashboard : React.FC = () => {
         <div style={styles.root}>
             <Sidebar/>
             <div style={styles.main}>
-                <Topbar/>
+                <TopBar/>
                 <div style={styles.content}>
+                    <AlertCard />
+                    <CommitGraph />
                 </div>
             </div>
         </div>
@@ -47,4 +49,5 @@ const styles : Record < string,
     };
 
 export default Dashboard;
+
 
