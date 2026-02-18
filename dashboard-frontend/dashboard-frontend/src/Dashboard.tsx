@@ -9,7 +9,7 @@ const Dashboard : React.FC = () => {
         <div style={styles.root}>
             <Sidebar/>
             <div style={styles.main}>
-                <TopBar/>
+                <Topbar/>
                 <div style={styles.content}>
                     <AlertCard />
                     <CommitGraph />
