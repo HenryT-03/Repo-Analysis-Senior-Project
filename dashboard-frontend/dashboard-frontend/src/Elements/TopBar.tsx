@@ -1,4 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import Calendar from "./Calendar";
+import type { DateRange } from "./Calendar";
 
 const CARDINAL = "#822433";
 
@@ -13,12 +15,46 @@ const TIME_OPTIONS = [
   "Last 30 Days",
 ];
 
+const CalendarIcon: React.FC = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    style={{ flexShrink: 0 }}
+  >
+    <rect x="1" y="3" width="14" height="12" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <line x1="1" y1="7" x2="15" y2="7" stroke="currentColor" strokeWidth="1.5" />
+    <line x1="5" y1="1" x2="5" y2="5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <line x1="11" y1="1" x2="11" y2="5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 const TopBar: React.FC = () => {
   const [search, setSearch] = useState("");
   const [selectedTime, setSelectedTime] = useState("Last 15 Minutes");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setCalendarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleCalendarApply = (_range: DateRange, label: string) => {
+    setSelectedTime(label);
+    setCalendarOpen(false);
+  };
 
   return (
     <div style={styles.topBar}>
@@ -38,10 +74,27 @@ const TopBar: React.FC = () => {
       <button style={styles.button}>
         <span style={styles.btnIcon}>&#8635;</span> Refresh
       </button>
+      <div style={styles.calendarWrapper} ref={calendarRef}>
+        <button
+          style={{ ...styles.button, ...styles.calendarBtn }}
+          onClick={() => { setCalendarOpen((o) => !o); setDropdownOpen(false); }}
+          title="Pick custom date range"
+        >
+          <CalendarIcon />
+        </button>
+        {calendarOpen && (
+          <div style={styles.calendarPopover}>
+            <Calendar
+              onApply={handleCalendarApply}
+              onClose={() => setCalendarOpen(false)}
+            />
+          </div>
+        )}
+      </div>
       <div style={styles.timeSelector} ref={dropdownRef}>
         <button
           style={{ ...styles.button, ...styles.timeBtn }}
-          onClick={() => { setDropdownOpen((o) => !o);}}
+          onClick={() => { setDropdownOpen((o) => !o); setCalendarOpen(false); }}
         >
           {selectedTime}
           <span style={styles.btnArrow}>{dropdownOpen ? "▲" : "▼"}</span>
@@ -77,7 +130,6 @@ const TopBar: React.FC = () => {
     </div>
   );
 };
-
 const styles: Record<string, React.CSSProperties> = {
   topBar: {
     display: "flex",
