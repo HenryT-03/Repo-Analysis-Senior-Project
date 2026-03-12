@@ -1,94 +1,31 @@
-from flask import Flask, jsonify, request
+from flask import Flask
 from flask_cors import CORS
-import requests
-import mysql.connector
-import bcrypt
+from config import SECRET_KEY, FRONTEND_URL
 
-app = Flask(__name__)
-CORS(app)
-
-# Database connection, local database for now
-db = mysql.connector.connect(
-    host="mysql-283de201-repo-analysis-2026.f.aivencloud.com",
-    port=22580,
-    user="avnadmin",
-    password="AVNS_kWdzkFxzOdjMY07eSqE",
-    database="defaultdb",
-    ssl_disabled=False
-)
-
-GITLAB_URL = "https://gitlab.com"
-PROJECT_PATH = "gitlab-org/gitlab"
-
-project = requests.get(
-    f"{GITLAB_URL}/api/v4/projects/{PROJECT_PATH.replace('/', '%2F')}"
-).json()
-print(project)
-
-project_id = project["id"]
-commits = requests.get(
-    f"https://gitlab.com/api/v4/projects/{project_id}/repository/commits",
-    params={"per_page": 100}
-).json()
-
-# store repo info
-cursor = db.cursor()
-cursor.execute("""
-INSERT INTO repos (id, name, description, created_at)
-VALUES (%s,%s,%s,NOW())
-ON DUPLICATE KEY UPDATE
-name=VALUES(name)
-""", (
-    project["id"],
-    project["name"],
-    project["description"]
-))
-db.commit()
+from auth.routes import auth_bp
+from gitlab.routes import gitlab_bp
+from users.routes import users_bp
 
 
-@app.route("/api/signup", methods=["POST"])
-def create_user():
-    data = request.json
-    username = data["username"]
-    email = data.get("email")
-    password = data["password"]
-    role = data["role"]
+def create_app():
+    app = Flask(__name__)
+    app.secret_key = SECRET_KEY
 
-    password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    # Allow requests from the TypeScript frontend
+    CORS(app, origins=[FRONTEND_URL], supports_credentials=True)
 
-    cursor = db.cursor()
-    cursor.execute(
-        "INSERT INTO users (username, email, password_hash, role) VALUES (%s,%s,%s,%s)",
-        (username, email, password_hash, role)
-    )
-    db.commit()
-    user_id = cursor.lastrowid
-    cursor.close()
+    # Register all blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(gitlab_bp)
+    app.register_blueprint(users_bp)
 
-    return jsonify({"id": user_id, "username": username, "role": role}), 201
+    @app.route("/health")
+    def health():
+        return {"status": "ok"}
 
-@app.route("/api/login", methods=["POST"])
-def login():
-    data = request.json
-    username = data["username"]
-    password = data["password"]
+    return app
 
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
-    user = cursor.fetchone()
-    cursor.close()
-
-    if user and bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
-        return jsonify({"id": user["id"], "username": user["username"], "role": user["role"]})
-    return jsonify({"error": "Invalid credentials"}), 401
-
-@app.route("/testdb")
-def test_db():
-    cursor = db.cursor()
-    cursor.execute("SELECT NOW()")
-    result = cursor.fetchone()
-    cursor.close()
-    return {"db_time": str(result[0])}
 
 if __name__ == "__main__":
+    app = create_app()
     app.run(debug=True)
