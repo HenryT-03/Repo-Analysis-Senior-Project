@@ -1,0 +1,12 @@
+{
+  "name": "repo-analysis-senior-project",
+  "version": "1.0.0",
+  "description": "tool to scan repos of student code and look for red flags",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

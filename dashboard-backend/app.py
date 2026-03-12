@@ -9,10 +9,12 @@ CORS(app)
 
 # Database connection, local database for now
 db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="password",
-    database="repo_analysis"
+    host="mysql-283de201-repo-analysis-2026.f.aivencloud.com",
+    port=22580,
+    user="avnadmin",
+    password="AVNS_kWdzkFxzOdjMY07eSqE",
+    database="defaultdb",
+    ssl_disabled=False
 )
 
 GITLAB_URL = "https://gitlab.com"
@@ -79,6 +81,14 @@ def login():
     if user and bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
         return jsonify({"id": user["id"], "username": user["username"], "role": user["role"]})
     return jsonify({"error": "Invalid credentials"}), 401
+
+@app.route("/testdb")
+def test_db():
+    cursor = db.cursor()
+    cursor.execute("SELECT NOW()")
+    result = cursor.fetchone()
+    cursor.close()
+    return {"db_time": str(result[0])}
 
 if __name__ == "__main__":
     app.run(debug=True)
