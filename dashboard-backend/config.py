@@ -26,8 +26,7 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD"),
     "database": os.getenv("DB_NAME", "defaultdb"),
     "ssl_disabled": False,
-    "ssl_ca": os.getenv("DB_SSL_CA"),        # Aiven CA cert path (recommended)
+    "ssl_ca": os.getenv("DB_SSL_CA"),
     "connection_timeout": 10,
-    "pool_name": "main_pool",
-    "pool_size": 5,
+    "pool_name": "aiven_pool",
 }
