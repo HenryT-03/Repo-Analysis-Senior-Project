@@ -1,15 +1,33 @@
 import React from "react";
-import Square from "./GroupviewSquare";
+import GroupCard from "./GroupviewSquare";
 
-type SquareGridProps = {
-  count: number;
+type Student = {
+  name: string;
+  quality: "excellent" | "good" | "poor";
 };
 
-const SquareGrid: React.FC<SquareGridProps> = ({ count }) => {
+type Group = {
+  id: number;
+  name: string;
+  totalCommits: number;
+  students: Student[];
+};
+
+type SquareGridProps = {
+  groups: Group[];
+};
+
+const SquareGrid: React.FC<SquareGridProps> = ({ groups }) => {
   return (
     <div style={styles.container}>
-      {Array.from({ length: count }, (_, i) => (
-        <Square key={i} id={i + 1} TA_Group="MK"/>
+      {groups.map((group) => (
+        <GroupCard
+          key={group.id}
+          id={group.id}
+          name={group.name}
+          totalCommits={group.totalCommits}
+          students={group.students}
+        />
       ))}
     </div>
   );
@@ -17,10 +35,10 @@ const SquareGrid: React.FC<SquareGridProps> = ({ count }) => {
 
 const styles = {
   container: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: "12px",
-    padding: "72px 12px 12px",
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "16px",
+    padding: "16px",
   },
 };
 
