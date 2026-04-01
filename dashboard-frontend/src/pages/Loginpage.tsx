@@ -25,6 +25,7 @@ export default function LoginPage() {
           border: "1px solid #ccc",
           borderRadius: 4,
           background: "#fff",
+          color: "#333",
         }}
       >
         Sign in with Microsoft
