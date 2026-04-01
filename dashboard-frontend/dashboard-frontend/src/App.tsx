@@ -1,13 +1,17 @@
 import React from 'react';
-import Dashboard from './Dashboard.tsx';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import GroupHub from './GroupHub';
+import Dashboard from './Dashboard';
 
 const App: React.FC = () => {
-  return <Dashboard />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<GroupHub />} />
+        <Route path="/group/:groupId" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
+  );
 };
-/** 
-fetch("http://localhost:5000/api/hello")
-  .then(res => res.json())
-  .then(data => console.log(data.message));
-  */
 
 export default App;

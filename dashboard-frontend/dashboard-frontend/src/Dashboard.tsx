@@ -1,16 +1,32 @@
 import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Sidebar from "./Elements/Sidebar";
-import Topbar from "./Elements/TopBar";
+import TopBar from "./Elements/TopBar";
 import AlertCard from "./Elements/AlertCard";
 import CommitGraph from "./Elements/CommitGraph";
 
-const Dashboard : React.FC = () => {
+const CARDINAL = "#822433";
+
+const Dashboard: React.FC = () => {
+    const { groupId } = useParams<{ groupId: string }>();
+    const navigate = useNavigate();
+
     return (
         <div style={styles.root}>
-            <Sidebar/>
+            <Sidebar />
             <div style={styles.main}>
-                <Topbar/>
+                <TopBar />
                 <div style={styles.content}>
+                    <div style={styles.breadcrumb}>
+                        <span
+                            style={styles.breadcrumbLink}
+                            onClick={() => navigate("/")}
+                        >
+                            Dashboard
+                        </span>
+                        <span style={styles.breadcrumbSep}> / </span>
+                        <span>{groupId ? `Group ${groupId}` : "Group"}</span>
+                    </div>
                     <AlertCard />
                     <CommitGraph />
                 </div>
@@ -19,8 +35,7 @@ const Dashboard : React.FC = () => {
     );
 };
 
-const styles : Record < string,
-    React.CSSProperties > = {
+const styles: Record<string, React.CSSProperties> = {
         root: {
             display: "flex",
             flexDirection: "row",
@@ -40,6 +55,20 @@ const styles : Record < string,
             overflowY: "auto",
             padding: "0 0 16px"
         },
+        breadcrumb: {
+            padding: "12px 16px 4px",
+            fontFamily: "'Courier New', Courier, monospace",
+            fontSize: "0.9rem",
+            color: "#555",
+        },
+        breadcrumbLink: {
+            color: CARDINAL,
+            cursor: "pointer",
+            textDecoration: "underline",
+        },
+        breadcrumbSep: {
+            margin: "0 4px",
+        },
         bottomRow: {
             display: "flex",
             flexDirection: "row",
@@ -50,6 +79,3 @@ const styles : Record < string,
     };
 
 export default Dashboard;
-
-
-
