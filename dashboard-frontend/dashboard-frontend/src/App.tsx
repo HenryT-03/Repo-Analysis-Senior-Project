@@ -1,13 +1,18 @@
-import React from 'react';
-import Dashboard from './Dashboard.tsx';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+import Dashboard from "./Dashboard";
+import TAOverallPage from "./TAOverallPage";
 
 const App: React.FC = () => {
-  return <Dashboard />;
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/ta" element={<TAOverallPage />} />
+      </Routes>
+    </Router>
+  );
 };
-/** 
-fetch("http://localhost:5000/api/hello")
-  .then(res => res.json())
-  .then(data => console.log(data.message));
-  */
 
 export default App;

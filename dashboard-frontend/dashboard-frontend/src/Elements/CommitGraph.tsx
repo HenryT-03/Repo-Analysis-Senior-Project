@@ -11,7 +11,7 @@ import {
   Dot,
 } from "recharts";
 
-const data = [
+const defaultData = [
   { time: "00:00", student1: 42, student2: 28 },
   { time: "02:00", student1: 22, student2: 35 },
   { time: "04:00", student1: 34, student2: 32 },
@@ -22,49 +22,61 @@ const data = [
   { time: "14:00", student1: 28, student2: 22 },
 ];
 
-const CommitLineChart: React.FC = () => {
+interface CommitGraphProps {
+  data?: Array<Record<string, any>>;
+  loading?: boolean;
+}
+
+const CommitGraph: React.FC<CommitGraphProps> = ({ data = defaultData, loading = false }) => {
+  const chartData = data && data.length > 0 ? data : defaultData;
+  
+  // Generate line colors dynamically based on available data keys
+  const getDataKeys = () => {
+    if (!chartData || chartData.length === 0) return [];
+    const keys = Object.keys(chartData[0]).filter(key => key !== 'time');
+    return keys;
+  };
+
+  const dataKeys = getDataKeys();
+  const colors = ['#CC0000', '#FDCA2F', '#0066CC', '#00CC66', '#FF9900', '#9900FF'];
+
   return (
     <div style={styles.wrapper}>
-      <ResponsiveContainer width="100%" height={280}>
-        <LineChart
-          data={data}
-          margin={{ top: 20, right: 30, left: 0, bottom: 10 }}
-        >
-          <CartesianGrid stroke="#e0e0e0" />
-          <XAxis
-            dataKey="time"
-            tick={{ fontFamily: "'Courier New', monospace", fontSize: 12 }}
-          />
-          <YAxis
-            tick={{ fontFamily: "'Courier New', monospace", fontSize: 12 }}
-          />
-          <Tooltip />
-          <Legend
-            formatter={(value) =>
-              value === "student1" ? "Student 1" : "Student 2"
-            }
-            wrapperStyle={{ fontFamily: "'Courier New', monospace" }}
-          />
-          <Line
-            type="linear"
-            dataKey="student1"
-            name="student1"
-            stroke="#CC0000"
-            strokeWidth={3}
-            dot={<Dot r={6} fill="#CC0000" stroke="#CC0000" />}
-            activeDot={{ r: 8 }}
-          />
-          <Line
-            type="linear"
-            dataKey="student2"
-            name="student2"
-            stroke="#FDCA2F"
-            strokeWidth={3}
-            dot={<Dot r={6} fill="#FDCA2F" stroke="#FDCA2F" />}
-            activeDot={{ r: 8 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {loading ? (
+        <div style={styles.loadingPlaceholder}>Loading commit data...</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 20, right: 30, left: 0, bottom: 10 }}
+          >
+            <CartesianGrid stroke="#e0e0e0" />
+            <XAxis
+              dataKey="time"
+              tick={{ fontFamily: "'Courier New', monospace", fontSize: 12 }}
+            />
+            <YAxis
+              tick={{ fontFamily: "'Courier New', monospace", fontSize: 12 }}
+            />
+            <Tooltip />
+            <Legend
+              wrapperStyle={{ fontFamily: "'Courier New', monospace" }}
+            />
+            {dataKeys.map((key, idx) => (
+              <Line
+                key={key}
+                type="linear"
+                dataKey={key}
+                name={key}
+                stroke={colors[idx % colors.length]}
+                strokeWidth={3}
+                dot={<Dot r={6} fill={colors[idx % colors.length]} stroke={colors[idx % colors.length]} />}
+                activeDot={{ r: 8 }}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 };
@@ -77,6 +89,15 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "12px",
     margin: "12px",
   },
+  loadingPlaceholder: {
+    width: "100%",
+    height: "280px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "14px",
+    color: "#999",
+  },
 };
 
-export default CommitLineChart;
+export default CommitGraph;
