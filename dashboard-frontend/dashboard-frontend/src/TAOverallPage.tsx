@@ -16,12 +16,12 @@ type TeamRow = {
   trivial: number;
   commitRating: 'Excellent' | 'Good' | 'Poor';
   linesPlusMinus: string;
-  mergedToMain: 'YES' | 'NO';
+  mergedToMain: 'YES' | 'NO' | 'N/A';
   issuesCreated: number;
   issuesUpdated: number;
-  branches: string;
-  isKotlin: 'YES' | 'NO' | 'PARTIAL' | 'NO DATA';
-  feBeConsist: 'YES' | 'NO' | 'PARTIAL' | 'NO DATA';
+  branches: 'YES' | 'NO' | 'PARTIAL' | 'NO DATA' | 'N/A';
+  isKotlin: 'YES' | 'NO' | 'PARTIAL' | 'NO DATA' | 'N/A';
+  feBeConsist: 'YES' | 'NO' | 'PARTIAL' | 'NO DATA' | 'N/A';
   autoNotes?: string;
 };
 
@@ -62,21 +62,79 @@ const summaryRows: TeamRow[] = [
   },
 ];
 
-const unknownAuthors: UnknownAuthor[] = [
-  {
-    team: '5_mh_3', sha: '2654eddc', author: 'Shea', email: 'shea.keister@...', message: 'Frontend Volly', date: '2026-02-16',
-  },
-];
-
-const kotlinFiles: KotlinFile[] = [
-  { team: '5_mh_5', filePath: 'Frontend/Roundtrip1/app/build.gradle.kts' },
-  { team: '5_mh_5', filePath: 'Frontend/Roundtrip1/app/src/androidTest/java/com/example/roundtrip1/ExampleInstrumentedTest.kt' },
-];
+const unknownAuthors: UnknownAuthor[] = [];
+const kotlinFiles: KotlinFile[] = [];
 
 function ratingBg(rating: TeamRow['commitRating']) {
   if (rating === 'Excellent') return '#c9f2cc';
   if (rating === 'Good') return '#fff2b4';
   return '#f5c1c1';
+}
+
+function buildRowsFromCommits(commits: any[], teamLabel: string): TeamRow[] {
+  const byAuthor = new Map<
+    string,
+    { student: string; username: string; total: number; additions: number; deletions: number; latest: string }
+  >();
+
+  for (const commit of commits) {
+    const student = commit.author_name || "Unknown";
+    const username =
+      commit.author_username ||
+      commit.author_email?.split("@")[0] ||
+      student.toLowerCase().replace(/\s+/g, "");
+
+    const key = `${student}::${username}`;
+
+    const current =
+      byAuthor.get(key) ?? {
+        student,
+        username,
+        total: 0,
+        additions: 0,
+        deletions: 0,
+        latest: "",
+      };
+
+    current.total += 1;
+    current.additions += Number(commit.additions ?? 0);
+    current.deletions += Number(commit.deletions ?? 0);
+
+    if (commit.committed_at) {
+      current.latest = new Date(commit.committed_at).toLocaleDateString();
+    }
+
+    byAuthor.set(key, current);
+  }
+
+  return Array.from(byAuthor.values()).map((a) => ({
+  team: teamLabel,
+  student: a.student || "N/A",
+  username: a.username || "N/A",
+  role: "BE",
+
+  totalCommits: a.total ?? -1,
+  meaningful: a.total ?? -1,
+  merge: 0,
+  trivial: 0,
+
+  commitRating:
+    a.total >= 5 ? "Excellent" :
+    a.total >= 2 ? "Good" : "Poor",
+
+  linesPlusMinus: `+${a.additions ?? -1}/-${a.deletions ?? -1}`,
+
+  mergedToMain: "N/A",
+
+  issuesCreated: -1,
+  issuesUpdated: -1,
+
+  branches: "N/A",
+  isKotlin: "N/A",
+  feBeConsist: "N/A",
+
+  autoNotes: a.latest ? `Latest commit: ${a.latest}` : "N/A",
+}));
 }
 
 function yesNoBg(value: string) {
@@ -87,7 +145,6 @@ function yesNoBg(value: string) {
 
 export default function TAOverallViewPage() {
   const [search, setSearch] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('5_mh_1');
   const [timeRange, setTimeRange] = useState('2026-02-10 to 2026-02-17');
   const [repos, setRepos] = useState<any[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -114,73 +171,66 @@ export default function TAOverallViewPage() {
   }, []);
 
   // Fetch stats when repo is selected
-  useEffect(() => {
-    if (!selectedRepoId) return;
+useEffect(() => {
+  if (!selectedRepoId) return;
 
-    const fetchStats = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await api.getRepoStats(selectedRepoId);
-        setRows(data);
-      } catch (err) {
-        console.error('Failed to fetch repo stats:', err);
-        setError('Failed to load student statistics');
-        setRows(summaryRows);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, [selectedRepoId]);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
 
-  // Fetch commits when repo is selected
-  useEffect(() => {
-    if (!selectedRepoId) return;
+    try {
+      const commits = await api.getRepoCommits(selectedRepoId);
 
-    const fetchCommits = async () => {
-      try {
-        const commits = await api.getRepoCommits(selectedRepoId);
+      // build table rows
+      setRows(buildRowsFromCommits(commits, selectedRepoId));
 
-        // Transform commits into time-series data
-        const timeMap = new Map<string, { [student: string]: number }>();
+      // build graph data
+      const timeMap = new Map<string, Record<string, number>>();
 
-        commits.forEach((commit: any) => {
-          const time = new Date(commit.committed_at).getHours().toString().padStart(2, "0") + ":00";
-          if (!timeMap.has(time)) {
-            timeMap.set(time, {});
-          }
-          const student = commit.author_name || "Unknown";
-          const current = timeMap.get(time)!;
-          current[student] = (current[student] || 0) + 1;
-        });
+      commits.forEach((commit: any) => {
+        const time =
+          new Date(commit.committed_at).getHours().toString().padStart(2, "0") + ":00";
 
-        // Convert to array format for recharts
-        const chartData = Array.from(timeMap.entries())
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([time, data]) => ({ time, ...data }));
+        if (!timeMap.has(time)) {
+          timeMap.set(time, {});
+        }
 
-        setCommitData(chartData);
-      } catch (err) {
-        console.warn('Failed to fetch commits:', err);
-        setCommitData([]);
-      }
-    };
+        const student = commit.author_name || "Unknown";
+        const current = timeMap.get(time)!;
+        current[student] = (current[student] || 0) + 1;
+      });
 
-    fetchCommits();
-  }, [selectedRepoId]);
+      const chartData = Array.from(timeMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([time, data]) => ({ time, ...data }));
 
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let filtered = rows.filter((row) => row.team === selectedGroup);
-    if (!q) return filtered;
-    return filtered.filter((row) =>
-      [row.team, row.student, row.username, row.role, row.commitRating, row.autoNotes ?? '']
-        .join(' ')
-        .toLowerCase()
-        .includes(q)
-    );
-  }, [search, selectedGroup, rows]);
+      setCommitData(chartData);
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load commit data");
+      setRows(summaryRows);
+      setCommitData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [selectedRepoId]);
+
+const filteredRows = useMemo(() => {
+  const q = search.trim().toLowerCase();
+
+  if (!q) return rows;
+
+  return rows.filter((row) =>
+    [row.team, row.student, row.username, row.role, row.commitRating, row.autoNotes ?? ""]
+      .join(" ")
+      .toLowerCase()
+      .includes(q)
+  );
+}, [search, rows]);
 
   return (
     <div style={styles.root}>
@@ -211,20 +261,35 @@ export default function TAOverallViewPage() {
                   pointerEvents: loading ? 'none' : 'auto'
                 }}
                 onClick={async () => {
-                  if (selectedRepoId) {
-                    setLoading(true);
-                    try {
-                      await api.syncRepo(selectedRepoId);
-                      const data = await api.getRepoStats(selectedRepoId);
-                      setRows(data);
-                    } catch (err) {
-                      console.error('Sync failed:', err);
-                      setError('Failed to sync repo');
-                    } finally {
-                      setLoading(false);
-                    }
-                  }
-                }}
+  if (!selectedRepoId) return;
+
+  setLoading(true);
+  try {
+    await api.syncRepo(selectedRepoId);
+    const commits = await api.getRepoCommits(selectedRepoId);
+    setCommitData(
+      Object.entries(
+        commits.reduce((acc: Record<string, Record<string, number>>, commit: any) => {
+          const time =
+            new Date(commit.committed_at).getHours().toString().padStart(2, "0") + ":00";
+          const student = commit.author_name || "Unknown";
+
+          acc[time] ||= {};
+          acc[time][student] = (acc[time][student] || 0) + 1;
+          return acc;
+        }, {})
+      )
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([time, data]) => ({ time, ...(data as Record<string, number>) }))
+    );
+    setRows(buildRowsFromCommits(commits, selectedRepoId));
+  } catch (err) {
+    console.error("Sync failed:", err);
+    setError("Failed to sync repo");
+  } finally {
+    setLoading(false);
+  }
+}}
               >
                 <RefreshCw style={styles.icon} /> {loading ? 'Syncing...' : 'Refresh'}
               </button>
@@ -246,18 +311,7 @@ export default function TAOverallViewPage() {
                   ))}
                 </select>
               )}
-              <select 
-                value={selectedGroup} 
-                onChange={(e) => setSelectedGroup(e.target.value)}
-                style={styles.groupSelect}
-              >
-                <option value="5_mh_1">Group 5_mh_1</option>
-                <option value="5_mh_2">Group 5_mh_2</option>
-                <option value="5_mh_3">Group 5_mh_3</option>
-                <option value="5_mh_4">Group 5_mh_4</option>
-                <option value="5_mh_5">Group 5_mh_5</option>
-                <option value="5_mh_6">Group 5_mh_6</option>
-              </select>
+             
             </div>
 
             {error && (
@@ -306,13 +360,20 @@ export default function TAOverallViewPage() {
               </table>
             </div>
 
-            <div style={styles.graphWrapper}>
-              <div style={styles.graphHeader}>
-                <h2 style={styles.graphTitle}>Commit Activity Summary</h2>
-                <p style={styles.graphSubtitle}>Commits over time by student performance</p>
-              </div>
-              <CommitGraph data={commitData} loading={loading} />
+          <div style={styles.graphWrapper}>
+            <div style={styles.graphHeader}>
+              <h2 style={styles.graphTitle}>Commit Activity Summary</h2>
+              <p style={styles.graphSubtitle}>Commits over time by student performance</p>
             </div>
+
+            {commitData.length === 0 ? (
+              <div style={{ padding: "16px", color: "#666" }}>
+                No commit data available.
+              </div>
+            ) : (
+              <CommitGraph data={commitData} loading={loading} />
+            )}
+          </div>
 
             <div style={styles.gridContainer}>
               <section style={styles.section}>
@@ -333,16 +394,27 @@ export default function TAOverallViewPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {unknownAuthors.map((r, idx) => (
-                        <tr key={idx} style={idx % 2 ? styles.rowEven : styles.rowOdd}>
-                          <td style={styles.cell}>{r.team}</td>
-                          <td style={styles.cell}>{r.sha}</td>
-                          <td style={styles.cell}>{r.author}</td>
-                          <td style={styles.cell}>{r.email}</td>
-                          <td style={styles.cell}>{r.message}</td>
-                          <td style={styles.cell}>{r.date}</td>
+                      {unknownAuthors.length > 0 ? (
+                        unknownAuthors.map((r, idx) => (
+                          <tr key={idx} style={idx % 2 ? styles.rowEven : styles.rowOdd}>
+                            <td style={styles.cell}>{r.team || "N/A"}</td>
+                            <td style={styles.cell}>{r.sha || "N/A"}</td>
+                            <td style={styles.cell}>{r.author || "N/A"}</td>
+                            <td style={styles.cell}>{r.email || "N/A"}</td>
+                            <td style={styles.cell}>{r.message || "N/A"}</td>
+                            <td style={styles.cell}>{r.date || "N/A"}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr style={styles.rowOdd}>
+                          <td style={styles.cell}>N/A</td>
+                          <td style={styles.cell}>N/A</td>
+                          <td style={styles.cell}>N/A</td>
+                          <td style={styles.cell}>N/A</td>
+                          <td style={styles.cell}>N/A</td>
+                          <td style={styles.cell}>N/A</td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -365,14 +437,23 @@ export default function TAOverallViewPage() {
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
-                      {kotlinFiles.map((r, idx) => (
+                  <tbody>
+                    {kotlinFiles.length > 0 ? (
+                      kotlinFiles.map((r, idx) => (
                         <tr key={idx} style={idx % 2 ? styles.rowEven : styles.rowOdd}>
-                          <td style={styles.cell}>{r.team}</td>
-                          <td style={{ ...styles.cell, fontFamily: 'monospace', fontSize: '12px' }}>{r.filePath}</td>
+                          <td style={styles.cell}>{r.team || "N/A"}</td>
+                          <td style={{ ...styles.cell, fontFamily: 'monospace', fontSize: '12px' }}>
+                            {r.filePath || "N/A"}
+                          </td>
                         </tr>
-                      ))}
-                    </tbody>
+                      ))
+                    ) : (
+                      <tr style={styles.rowOdd}>
+                        <td style={styles.cell}>N/A</td>
+                        <td style={{ ...styles.cell, fontFamily: 'monospace', fontSize: '12px' }}>N/A</td>
+                      </tr>
+                    )}
+                  </tbody>
                   </table>
                 </div>
               </section>
