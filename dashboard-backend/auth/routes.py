@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, redirect, request, jsonify, session
 import requests
 from config import CLIENT_ID, CLIENT_SECRET, AUTHORITY, REDIRECT_URI, FRONTEND_URL
@@ -8,7 +10,9 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 @auth_bp.route("/login")
 def login():
-    """Redirect user to Microsoft login page."""
+    if os.getenv("DEV_MODE") == "true":
+        return redirect(f"{FRONTEND_URL}/?token=dev-token")
+    
     auth_url = (
         f"{AUTHORITY}/oauth2/v2.0/authorize"
         f"?client_id={CLIENT_ID}"
@@ -95,10 +99,15 @@ def auth_callback():
 
 @auth_bp.route("/me")
 def me():
-    """
-    Returns current user info from a valid MS token.
-    Frontend calls this on load to rehydrate session.
-    """
+    if os.getenv("DEV_MODE") == "true":
+        return jsonify({
+            "id": 1,
+            "email": "dev@test.com",
+            "name": "Dev User",
+            "role": "instructor",
+            "gitlab_username": None
+        })
+    
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         return jsonify({"error": "Not authenticated"}), 401
