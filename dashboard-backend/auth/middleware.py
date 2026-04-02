@@ -3,7 +3,8 @@ from functools import wraps
 
 import requests
 from flask import request, jsonify, g
-
+import requests
+import os
 from db import DbCursor
 
 
@@ -13,10 +14,10 @@ def require_auth(f):
         if os.getenv("DEV_MODE") == "true":
             g.user = {
                 "id": 1,
-                "microsoft_id": "dev",
                 "email": "dev@test.com",
                 "name": "Dev User",
                 "role": "instructor",
+                "gitlab_username": None
             }
             return f(*args, **kwargs)
 
