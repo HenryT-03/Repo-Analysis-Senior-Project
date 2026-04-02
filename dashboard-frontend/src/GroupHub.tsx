@@ -1,69 +1,32 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import HubSidebar from "./Elements/HubSidebar";
 import TopBar from "./Elements/TopBar";
 import SquareGrid from "./Elements/GroupviewSquareGrid";
-
-const GROUPS = [
-  { id: 1, name: "Group 1", totalCommits: 142, students: [
-    { name: "alicej",    quality: "excellent" as const },
-    { name: "bsmith",    quality: "good"      as const },
-    { name: "cwhite",    quality: "excellent" as const },
-    { name: "dlee",      quality: "poor"      as const },
-  ]},
-  { id: 2, name: "Group 2", totalCommits: 98, students: [
-    { name: "emartinez", quality: "good"      as const },
-    { name: "fbrown",    quality: "poor"      as const },
-    { name: "gkim",      quality: "excellent" as const },
-  ]},
-  { id: 3, name: "Group 3", totalCommits: 211, students: [
-    { name: "hdavis",    quality: "excellent" as const },
-    { name: "iwilson",   quality: "excellent" as const },
-    { name: "jtaylor",   quality: "good"      as const },
-    { name: "kmoore",    quality: "good"      as const },
-  ]},
-  { id: 4, name: "Group 4", totalCommits: 75, students: [
-    { name: "landerson", quality: "poor"      as const },
-    { name: "mthomas",   quality: "good"      as const },
-    { name: "njackson",  quality: "poor"      as const },
-  ]},
-  { id: 5, name: "Group 5", totalCommits: 163, students: [
-    { name: "oharris",   quality: "excellent" as const },
-    { name: "pmartin",   quality: "good"      as const },
-    { name: "qthompson", quality: "excellent" as const },
-    { name: "rgarcia",   quality: "good"      as const },
-  ]},
-  { id: 6, name: "Group 6", totalCommits: 54, students: [
-    { name: "smartinez", quality: "poor"      as const },
-    { name: "trobinson", quality: "poor"      as const },
-    { name: "uclark",    quality: "good"      as const },
-  ]},
-  { id: 7, name: "Group 7", totalCommits: 189, students: [
-    { name: "vrodriguez", quality: "excellent" as const },
-    { name: "wlewis",    quality: "good"      as const },
-    { name: "xlee",      quality: "excellent" as const },
-    { name: "ywalker",   quality: "good"      as const },
-  ]},
-  { id: 8, name: "Group 8", totalCommits: 120, students: [
-    { name: "zhall",     quality: "excellent" as const },
-    { name: "aallen",    quality: "good"      as const },
-    { name: "byoung",    quality: "poor"      as const },
-  ]},
-  { id: 9, name: "Group 9", totalCommits: 37, students: [
-    { name: "chernandez", quality: "poor"     as const },
-    { name: "dking",     quality: "poor"      as const },
-    { name: "ewright",   quality: "good"      as const },
-    { name: "fscott",    quality: "poor"      as const },
-  ]},
-];
+import { fetchGroupsOverview, type GroupOverview } from "./api";
 
 const GroupHub: React.FC = () => {
+  const [groups, setGroups] = useState<GroupOverview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchGroupsOverview()
+      .then(setGroups)
+      .catch((err: unknown) =>
+        setError(err instanceof Error ? err.message : "Failed to load groups")
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div style={styles.root}>
       <HubSidebar />
       <div style={styles.main}>
         <TopBar />
         <div style={styles.content}>
-          <SquareGrid groups={GROUPS} />
+          {loading && <p style={styles.message}>Loading groups…</p>}
+          {error && <p style={{ ...styles.message, color: "#c62828" }}>{error}</p>}
+          {!loading && !error && <SquareGrid groups={groups} />}
         </div>
       </div>
     </div>
@@ -75,7 +38,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "row",
     height: "100vh",
-    width: "100vw",
+    width: "100%",
     overflow: "hidden",
     backgroundColor: "#f0f0f0",
   },
@@ -88,6 +51,11 @@ const styles: Record<string, React.CSSProperties> = {
   content: {
     flex: 1,
     overflowY: "auto",
+  },
+  message: {
+    fontFamily: "'Courier New', Courier, monospace",
+    padding: "24px",
+    color: "#555",
   },
 };
 

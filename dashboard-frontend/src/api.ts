@@ -20,13 +20,13 @@ export async function fetchMe() {
 // ── Repos ─────────────────────────────────────────────────────────────────────
 
 export async function fetchRepos() {
-  const res = await fetch(`${BACKEND}/gitlab/repos`, { headers: authHeaders() });
+  const res = await fetch(`${BACKEND}/gitrepo/repos`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to fetch repos");
   return res.json();
 }
 
 export async function addRepo(projectPath: string) {
-  const res = await fetch(`${BACKEND}/gitlab/repos`, {
+  const res = await fetch(`${BACKEND}/gitrepo/repos`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ project_path: projectPath }),
@@ -36,7 +36,7 @@ export async function addRepo(projectPath: string) {
 }
 
 export async function syncRepo(repoId: number) {
-  const res = await fetch(`${BACKEND}/gitlab/repos/${repoId}/sync`, {
+  const res = await fetch(`${BACKEND}/gitrepo/repos/${repoId}/sync`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -47,7 +47,7 @@ export async function syncRepo(repoId: number) {
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 export async function fetchRepoStats(repoId: number) {
-  const res = await fetch(`${BACKEND}/gitlab/repos/${repoId}/stats`, {
+  const res = await fetch(`${BACKEND}/gitrepo/repos/${repoId}/stats`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to fetch stats");
@@ -56,11 +56,50 @@ export async function fetchRepoStats(repoId: number) {
 
 export async function fetchCommits(repoId: number, authorEmail?: string) {
   const url = authorEmail
-    ? `${BACKEND}/gitlab/repos/${repoId}/commits?author_email=${authorEmail}`
-    : `${BACKEND}/gitlab/repos/${repoId}/commits`;
+    ? `${BACKEND}/gitrepo/repos/${repoId}/commits?author_email=${encodeURIComponent(authorEmail)}`
+    : `${BACKEND}/gitrepo/repos/${repoId}/commits`;
   const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to fetch commits");
   return res.json();
+}
+
+// ── Groups overview ───────────────────────────────────────────────────────────
+
+type StudentQuality = "excellent" | "good" | "poor";
+
+export type GroupOverview = {
+  id: number;
+  name: string;
+  totalCommits: number;
+  students: { name: string; quality: StudentQuality }[];
+};
+
+export async function fetchGroupsOverview(): Promise<GroupOverview[]> {
+  const repos: { id: number; name: string }[] = await fetchRepos();
+
+  const groups = await Promise.all(
+    repos.map(async (repo) => {
+      const stats: {
+        author_name: string;
+        author_email: string;
+        commit_count: number;
+      }[] = await fetchRepoStats(repo.id);
+
+      const totalCommits = stats.reduce((sum, s) => sum + (s.commit_count ?? 0), 0);
+      const avg = stats.length > 0 ? totalCommits / stats.length : 0;
+
+      const students = stats.map((s) => {
+        const ratio = avg > 0 ? s.commit_count / avg : 1;
+        const quality: StudentQuality =
+          ratio >= 1.0 ? "excellent" : ratio >= 0.5 ? "good" : "poor";
+        return { name: s.author_name || s.author_email, quality };
+      });
+
+      return { id: repo.id, name: repo.name, totalCommits, students };
+    })
+  );
+
+  return groups;
 }
 
 // ── AI Analysis ───────────────────────────────────────────────────────────────
