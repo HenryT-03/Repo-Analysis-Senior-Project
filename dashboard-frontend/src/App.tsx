@@ -4,6 +4,7 @@ import { fetchMe } from "./api.ts";
 import LoginPage from "./pages/Loginpage";
 import DashboardPage from "./pages/Dashboardpage";
 import RepoPage from "./pages/Repopage";
+import GroupHub from './GroupHub';
 
 export type User = {
   id: number;
@@ -51,6 +52,14 @@ export default function App() {
             user
               ? <Navigate to="/dashboard" replace />
               : <LoginPage />
+          }
+        />
+        <Route
+          path="/groups"
+          element={
+            user
+              ? <GroupHub />
+              : <Navigate to="/" replace />
           }
         />
         <Route
