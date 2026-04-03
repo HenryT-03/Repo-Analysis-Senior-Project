@@ -18,22 +18,22 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 const api = {
   // Repos
   getRepos: async () => {
-    return fetchWithAuth(`${API_BASE}/gitlab/repos`);
+    return fetchWithAuth(`${API_BASE}/gitrepo/repos`);
   },
 
   // Repo Stats
   getRepoStats: async (repoId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitlab/repos/${repoId}/stats`);
+    return fetchWithAuth(`${API_BASE}/gitrepo/repos/${repoId}/stats`);
   },
 
   // Repo Commits
   getRepoCommits: async (repoId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitlab/repos/${repoId}/commits`);
+    return fetchWithAuth(`${API_BASE}/gitrepo/repos/${repoId}/commits`);
   },
 
   // Sync Repo
   syncRepo: async (repoId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitlab/repos/${repoId}/sync`, { method: 'POST' });
+    return fetchWithAuth(`${API_BASE}/gitrepo/repos/${repoId}/sync`, { method: 'POST' });
   },
 
   // Auth routes (no auth header needed)

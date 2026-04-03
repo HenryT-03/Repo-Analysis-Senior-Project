@@ -4,6 +4,9 @@ import { fetchMe } from "./api.ts";
 import LoginPage from "./pages/Loginpage";
 import DashboardPage from "./pages/Dashboardpage";
 import RepoPage from "./pages/Repopage";
+import GroupHub from './GroupHub';
+import TAOverallViewPage from './TAOverallPage';
+
 
 export type User = {
   id: number;
@@ -53,19 +56,27 @@ export default function App() {
               : <LoginPage />
           }
         />
+        {/* <Route
+          path="/groups"
+          element={
+            user
+              ? <GroupHub />
+              : <Navigate to="/" replace />
+          }
+        /> */}
         <Route
           path="/dashboard"
           element={
             user
-              ? <DashboardPage user={user} onLogout={logout} />
+              ? <GroupHub />
               : <Navigate to="/" replace />
           }
         />
         <Route
-          path="/repo/:repoId"
+          path="/group/:repoId"
           element={
             user
-              ? <RepoPage user={user} onLogout={logout} />
+              ? <TAOverallViewPage />
               : <Navigate to="/" replace />
           }
         />

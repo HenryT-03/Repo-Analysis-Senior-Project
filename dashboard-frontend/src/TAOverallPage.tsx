@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Search, RefreshCw, CalendarDays } from 'lucide-react';
-import Sidebar from "./Elements/Sidebar";
+import Sidebar from "./Elements/HubSidebar";
 import TopBar from "./Elements/TopBar";
 import CommitGraph from "./Elements/CommitGraph";
 import api from "./services/api";
@@ -234,7 +234,7 @@ const filteredRows = useMemo(() => {
 
   return (
     <div style={styles.root}>
-      <Sidebar />
+      <Sidebar  />
       <div style={styles.main}>
         <TopBar />
         <div style={styles.content}>
