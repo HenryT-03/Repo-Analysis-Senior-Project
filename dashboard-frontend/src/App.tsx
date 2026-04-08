@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { fetchMe } from "./api.ts";
 import LoginPage from "./pages/Loginpage";
-import DashboardPage from "./pages/Dashboardpage";
+import DashboardPage from "./pages/GroupHub";
 import RepoPage from "./pages/Repopage";
 
 export type User = {
@@ -18,22 +18,38 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Pick up token from Microsoft/dev login redirect
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
+
     if (token) {
+      // Came back from OAuth redirect — process token and go to dashboard
       localStorage.setItem("token", token);
       window.history.replaceState({}, "", "/");
+
+      fetchMe()
+        .then((data: unknown) => {
+          const u = data as User;
+          if (u?.id && u?.email) setUser(u);
+          else throw new Error("Invalid user response");
+        })
+        .catch(() => localStorage.removeItem("token"))
+        .finally(() => setLoading(false));
+    } else {
+      // No token in URL — always show the login page, let the user click
+      setLoading(false);
     }
-
-    const stored = token || localStorage.getItem("token");
-    if (!stored) { setLoading(false); return; }
-
-    fetchMe()
-      .then(setUser)
-      .catch(() => localStorage.removeItem("token"))
-      .finally(() => setLoading(false));
   }, []);
+
+  function onLoginSuccess(token: string) {
+    localStorage.setItem("token", token);
+    fetchMe()
+      .then((data: unknown) => {
+        const u = data as User;
+        if (u?.id && u?.email) setUser(u);
+        else throw new Error("Invalid user response");
+      })
+      .catch(() => localStorage.removeItem("token"));
+  }
 
   function logout() {
     localStorage.removeItem("token");
@@ -50,9 +66,11 @@ export default function App() {
           element={
             user
               ? <Navigate to="/dashboard" replace />
-              : <LoginPage />
+              : <LoginPage onLoginSuccess={onLoginSuccess} />
           }
         />
+        {/* Alias in case anything links to /loginpage */}
+        <Route path="/loginpage" element={<Navigate to="/" replace />} />
         <Route
           path="/dashboard"
           element={

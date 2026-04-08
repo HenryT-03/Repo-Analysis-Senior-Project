@@ -1,6 +1,14 @@
 const BACKEND = "http://localhost:5000";
 
-export default function LoginPage() {
+type Props = {
+  onLoginSuccess: (token: string) => void;
+};
+
+export default function LoginPage({ onLoginSuccess }: Props) {
+  function handleLogin() {
+    window.location.href = `${BACKEND}/auth/login`;
+  }
+
   return (
     <div style={{
       display: "flex",
@@ -16,7 +24,7 @@ export default function LoginPage() {
         Sign in to view repository contributions and analysis.
       </p>
       <button
-        onClick={() => (window.location.href = `${BACKEND}/auth/login`)}
+        onClick={handleLogin}
         style={{
           marginTop: 8,
           padding: "10px 24px",
