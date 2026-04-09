@@ -120,3 +120,49 @@ def get_all_commits_paginated(project_id: int, author_email=None) -> list:
         all_commits.extend(batch)
         page += 1
     return all_commits
+
+
+#Jacob Methods
+def get_project_commits(project_id: int) -> list:
+    """
+    Fetch commits with detailed stats (additions/deletions).
+    """
+    commits_resp = requests.get(
+        f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits",
+        headers=_headers(),
+        params={"per_page": 100},
+        timeout=10,
+    )
+    commits_resp.raise_for_status()
+    commits = commits_resp.json()
+
+    detailed_commits = []
+
+    for c in commits:
+        sha = c["id"]
+
+        detail_resp = requests.get(
+            f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits/{sha}",
+            headers=_headers(),
+            timeout=10,
+        )
+        detail_resp.raise_for_status()
+        detail = detail_resp.json()
+
+        detailed_commits.append({
+            "id": sha,
+            "repo_id": project_id,
+            "author_name": c.get("author_name"),
+            "author_email": c.get("author_email"),
+            "message": c.get("title"),
+            "branch": c.get("refs", ["main"])[0] if c.get("refs") else "main",
+            "committed_at": c.get("committed_date"),
+            "created_at": c.get("created_at"),
+
+            "additions": detail.get("stats", {}).get("additions", 0),
+            "deletions": detail.get("stats", {}).get("deletions", 0),
+
+            "sha": sha
+        })
+
+    return detailed_commits

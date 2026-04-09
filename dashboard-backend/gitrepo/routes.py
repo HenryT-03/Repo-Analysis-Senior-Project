@@ -2,7 +2,7 @@ import requests
 from flask import Blueprint, jsonify, request, g
 from auth.middleware import require_auth, require_role
 from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats
-from gitrepo.client import get_project, get_group_projects, get_contributors
+from gitrepo.client import get_project, get_group_projects, get_contributors, get_project_commits
 from db import DbCursor
 
 gitrepo_bp = Blueprint("gitrepo", __name__, url_prefix="/gitrepo")
@@ -150,3 +150,11 @@ def fetch_contributors(project_id):
     return jsonify({
         "contributors": contributors
     })
+
+@gitrepo_bp.route("/projects/<int:project_id>/commits", methods=["GET"])
+def fetch_commits(project_id):
+    try:
+        commits = get_project_commits(project_id)
+        return jsonify(commits)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -71,7 +71,6 @@ const GroupHub: React.FC = () => {
           <SquareGrid 
             groups={transformed.map((g) => ({
               ...g,
-              onClick: () => navigate(`/ta-overall`)
             }))}
           />
         )}

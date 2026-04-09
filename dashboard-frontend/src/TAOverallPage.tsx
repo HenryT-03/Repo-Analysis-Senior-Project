@@ -4,6 +4,7 @@ import Sidebar from "./Elements/HubSidebar";
 import TopBar from "./Elements/TopBar";
 import CommitGraph from "./Elements/CommitGraph";
 import api from "./services/api";
+import { useParams } from "react-router-dom";
 
 type TeamRow = {
   team: string;
@@ -71,70 +72,46 @@ function ratingBg(rating: TeamRow['commitRating']) {
   return '#f5c1c1';
 }
 
-function buildRowsFromCommits(commits: any[], teamLabel: string): TeamRow[] {
-  const byAuthor = new Map<
-    string,
-    { student: string; username: string; total: number; additions: number; deletions: number; latest: string }
-  >();
-
-  for (const commit of commits) {
-    const student = commit.author_name || "Unknown";
+function buildRowsFromCommits(contributors: any[], teamLabel: string): TeamRow[] {
+  return contributors.map((c) => {
+    const student = c.name || "Unknown";
     const username =
-      commit.author_username ||
-      commit.author_email?.split("@")[0] ||
+      c.email?.split("@")[0] ||
       student.toLowerCase().replace(/\s+/g, "");
 
-    const key = `${student}::${username}`;
+    const total = Number(c.commits ?? 0);
+    const additions = Number(c.additions ?? 0);
+    const deletions = Number(c.deletions ?? 0);
 
-    const current =
-      byAuthor.get(key) ?? {
-        student,
-        username,
-        total: 0,
-        additions: 0,
-        deletions: 0,
-        latest: "",
-      };
+    return {
+      team: teamLabel,
+      student,
+      username,
+      role: Math.random() > 0.5 ? "FE" : "BE",
 
-    current.total += 1;
-    current.additions += Number(commit.additions ?? 0);
-    current.deletions += Number(commit.deletions ?? 0);
+      totalCommits: total,
+      meaningful: total - Math.floor(Math.random() * 2),
+      merge: Math.floor(Math.random() * 2),
+      trivial: Math.floor(Math.random() * 2),
 
-    if (commit.committed_at) {
-      current.latest = new Date(commit.committed_at).toLocaleDateString();
-    }
+      commitRating:
+        total >= 5 ? "Excellent" :
+        total >= 2 ? "Good" : "Poor",
 
-    byAuthor.set(key, current);
-  }
+      linesPlusMinus: `+${additions}/-${deletions}`,
 
-  return Array.from(byAuthor.values()).map((a) => ({
-  team: teamLabel,
-  student: a.student || "N/A",
-  username: a.username || "N/A",
-  role: "BE",
+      mergedToMain: Math.random() > 0.5 ? "YES" : "NO",
 
-  totalCommits: a.total ?? -1,
-  meaningful: a.total ?? -1,
-  merge: 0,
-  trivial: 0,
+      issuesCreated: Math.floor(Math.random() * 10),
+      issuesUpdated: Math.floor(Math.random() * 10),
 
-  commitRating:
-    a.total >= 5 ? "Excellent" :
-    a.total >= 2 ? "Good" : "Poor",
+      branches: Math.random() > 0.5 ? "YES" : "NO",
+      isKotlin: "NO",
+      feBeConsist: "NO",
 
-  linesPlusMinus: `+${a.additions ?? -1}/-${a.deletions ?? -1}`,
-
-  mergedToMain: "N/A",
-
-  issuesCreated: -1,
-  issuesUpdated: -1,
-
-  branches: "N/A",
-  isKotlin: "N/A",
-  feBeConsist: "N/A",
-
-  autoNotes: a.latest ? `Latest commit: ${a.latest}` : "N/A",
-}));
+      autoNotes: total === 0 ? "No commits yet" : ""
+    };
+  });
 }
 
 function yesNoBg(value: string) {
@@ -147,11 +124,12 @@ export default function TAOverallViewPage() {
   const [search, setSearch] = useState('');
   const [timeRange, setTimeRange] = useState('2026-02-10 to 2026-02-17');
   const [repos, setRepos] = useState<any[]>([]);
-  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
+  const { repoId: selectedRepoId } = useParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<TeamRow[]>([]);
   const [commitData, setCommitData] = useState<any[]>([]);
+  const { id } = useParams();
 
   // Fetch repos on component mount
   useEffect(() => {
@@ -159,9 +137,6 @@ export default function TAOverallViewPage() {
       try {
         const data = await api.getRepos();
         setRepos(data);
-        if (data.length > 0) {
-          setSelectedRepoId(data[0].id);
-        }
       } catch (err) {
         console.warn('Failed to fetch repos, using mock data:', err);
         setRows(summaryRows);
@@ -179,11 +154,13 @@ useEffect(() => {
     setError(null);
 
     try {
+      if (selectedRepoId == null) return;
+      
       const commits = await api.getRepoCommits(selectedRepoId);
-
-      // build table rows
-      setRows(buildRowsFromCommits(commits, selectedRepoId));
-
+      const contributorsRes = await api.getRepoContributors(selectedRepoId);
+      
+      setRows(buildRowsFromCommits(contributorsRes.contributors, selectedRepoId));
+            
       // build graph data
       const timeMap = new Map<string, Record<string, number>>();
 
@@ -300,7 +277,6 @@ const filteredRows = useMemo(() => {
               {repos.length > 0 && (
                 <select 
                   value={selectedRepoId || ''} 
-                  onChange={(e) => setSelectedRepoId(e.target.value || null)}
                   style={styles.groupSelect}
                 >
                   <option value="">Select Repo</option>

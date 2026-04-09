@@ -28,9 +28,12 @@ const api = {
 
   // Repo Commits
   getRepoCommits: async (repoId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/repos/${repoId}/commits`);
+    return fetchWithAuth(`${API_BASE}/gitrepo/projects/${repoId}/commits`);
   },
-
+  // Repo Commits
+  getRepoContributors: async (projectId: string) => {
+    return fetchWithAuth(`${API_BASE}/gitrepo/projects/${projectId}/contributors`);
+  },
   // Sync Repo
   syncRepo: async (repoId: string) => {
     return fetchWithAuth(`${API_BASE}/gitrepo/repos/${repoId}/sync`, { method: 'POST' });
