@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import HubSidebar from "./Elements/HubSidebar";
 import TopBar from "./Elements/TopBar";
 import SquareGrid from "./Elements/GroupviewSquareGrid";
+import LoadingSpinner from "./Elements/LoadingSpinner";
 import { fetchRepos } from "./api";
 
 type Repo = {
@@ -23,13 +24,20 @@ const GroupHub: React.FC = () => {
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     fetchRepos()
-      .then((res) => {
-      setGroups(res.data);
+    .then((res) => {
+        setGroups(res.data);
       })
-      .catch(() => setError("Failed to load repos"));
+    .catch(() => {
+        setError("Failed to load projects");
+    })
+    .finally(() => {
+      setLoading(false);
+    });      
   }, []);
     
   const transformed = groups.map((g) => ({
@@ -55,15 +63,18 @@ const GroupHub: React.FC = () => {
             style={styles.search}
           />
 
-          {error && <p style={styles.error}>{error}</p>}
+        {error && <p style={styles.error}>{error}</p>}
 
-          {/* Grid */}
-        <SquareGrid 
-          groups={transformed.map((g) => ({
-            ...g,
-            onClick: () => navigate(`/ta-overall`)
-          }))}
-        />
+        {loading ? (
+          <LoadingSpinner />
+        ) : (
+          <SquareGrid 
+            groups={transformed.map((g) => ({
+              ...g,
+              onClick: () => navigate(`/ta-overall`)
+            }))}
+          />
+        )}
         </div>
       </div>
     </div>
