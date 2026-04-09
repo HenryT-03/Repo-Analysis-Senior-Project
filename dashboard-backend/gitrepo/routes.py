@@ -1,11 +1,11 @@
+import requests
 from flask import Blueprint, jsonify, request, g
 from auth.middleware import require_auth, require_role
 from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats
-from gitrepo.client import get_project
+from gitrepo.client import get_project, get_group_projects, get_contributors
 from db import DbCursor
 
 gitrepo_bp = Blueprint("gitrepo", __name__, url_prefix="/gitrepo")
-
 
 @gitrepo_bp.route("/repos", methods=["POST"])
 @require_auth
@@ -31,7 +31,6 @@ def add_repo():
             "url": project["web_url"],
         }
     }), 201
-
 
 @gitrepo_bp.route("/repos", methods=["GET"])
 @require_auth
@@ -115,3 +114,28 @@ def list_commits(repo_db_id):
         commits = cursor.fetchall()
 
     return jsonify(commits)
+
+# Methods Jacob Added, they don't use database. Will see how they perform
+@gitrepo_bp.route("/projects", methods=["GET"])
+def fetch_projects():
+    projects = get_group_projects()
+
+    result = []
+
+    for p in projects:
+        project_id = p["id"]
+
+        contributors = get_contributors(project_id)
+        total_commits = sum(c.get("commits", 0) for c in contributors)
+        num_students = len(contributors)
+
+        result.append({
+            "repo": p["name"],
+            "totalCommits": total_commits,
+            "students": num_students
+        })
+
+    return jsonify({
+        "count": len(result),
+        "data": result
+    })

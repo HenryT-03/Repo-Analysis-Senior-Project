@@ -1,5 +1,5 @@
 import requests
-from config import GITLAB_URL, GITLAB_TOKEN
+from config import GITLAB_URL, GITLAB_TOKEN, GITLAB_GROUP_NAME
 
 def _headers():
     h = {"Content-Type": "application/json"}
@@ -7,6 +7,21 @@ def _headers():
         h["PRIVATE-TOKEN"] = GITLAB_TOKEN
     return h
 
+def get_group_projects() -> list[dict]:
+    """Fetch all projects in a GitLab group (e.g. 'cs309/309Spring2017')."""
+    
+    resp = requests.get(
+        f"{GITLAB_URL}/api/v4/groups/{GITLAB_GROUP_NAME}/projects",
+        headers=_headers(),
+        timeout=10,
+        params={
+            "per_page": 100,
+            "include_subgroups": True
+        }
+    )
+
+    resp.raise_for_status()
+    return resp.json()
 
 def get_project(project_path: str) -> dict:
     """Fetch project metadata by path (e.g. 'group/repo')."""

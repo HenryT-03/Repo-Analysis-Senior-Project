@@ -12,8 +12,9 @@ REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:5000/auth/callback")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # GitLab
-GITLAB_URL = os.getenv("GITLAB_URL", "https://gitlab.com")
-GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")  # Personal access token for higher rate limits
+GITLAB_URL = os.getenv("GITLAB_URL", "https://git.las.iastate.edu")
+GITLAB_TOKEN = os.getenv("GITLAB_URL","glpat-XpSTIB5NDxEctH7oVZiuKG86MQp1OjFpawk.01.0z1hwyb5n")  #os.getenv("GITLAB_TOKEN")  # Personal access token for higher rate limits
+GITLAB_GROUP_NAME = "cs309%2F309Spring2017"
 
 # Flask
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-in-prod")
