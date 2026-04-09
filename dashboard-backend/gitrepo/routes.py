@@ -132,10 +132,22 @@ def fetch_projects():
         result.append({
             "repo": p["name"],
             "totalCommits": total_commits,
-            "students": num_students
+            "students": num_students,
+            "id": p["id"]
         })
 
     return jsonify({
         "count": len(result),
         "data": result
+    })
+
+@gitrepo_bp.route("/projects/<int:project_id>/contributors", methods=["GET"])
+def fetch_contributors(project_id):
+    """
+    Get per-project contributor stats.
+    """
+    contributors = get_contributors(project_id)
+
+    return jsonify({
+        "contributors": contributors
     })
