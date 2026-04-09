@@ -90,7 +90,7 @@ function buildRowsFromCommits(contributors: any[], teamLabel: string): TeamRow[]
       role: Math.random() > 0.5 ? "FE" : "BE",
 
       totalCommits: total,
-      meaningful: total - Math.floor(Math.random() * 2),
+      meaningful: Math.floor(Math.random() * 2),
       merge: Math.floor(Math.random() * 2),
       trivial: Math.floor(Math.random() * 2),
 
