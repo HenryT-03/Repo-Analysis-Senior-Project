@@ -127,12 +127,11 @@ def fetch_projects():
 
         contributors = get_contributors(project_id)
         total_commits = sum(c.get("commits", 0) for c in contributors)
-        num_students = len(contributors)
 
         result.append({
-            "repo": p["name"],
+            "name": p["name"],
             "totalCommits": total_commits,
-            "students": num_students,
+            "students": contributors,
             "id": p["id"]
         })
 

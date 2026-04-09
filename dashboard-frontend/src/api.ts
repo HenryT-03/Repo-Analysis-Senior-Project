@@ -20,7 +20,7 @@ export async function fetchMe() {
 // ── Repos ─────────────────────────────────────────────────────────────────────
 
 export async function fetchRepos() {
-  const res = await fetch(`${BACKEND}/gitrepo/repos`, { headers: authHeaders() });
+  const res = await fetch(`${BACKEND}/gitrepo/projects`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to fetch repos");
   return res.json();
 }

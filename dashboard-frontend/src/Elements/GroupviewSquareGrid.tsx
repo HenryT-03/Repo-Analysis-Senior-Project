@@ -11,6 +11,7 @@ type Group = {
   name: string;
   totalCommits: number;
   students: Student[];
+  onClick?: () => void;
 };
 
 type SquareGridProps = {
@@ -27,6 +28,7 @@ const SquareGrid: React.FC<SquareGridProps> = ({ groups }) => {
           name={group.name}
           totalCommits={group.totalCommits}
           students={group.students}
+          onClick={group.onClick} 
         />
       ))}
     </div>

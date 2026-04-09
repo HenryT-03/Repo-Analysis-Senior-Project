@@ -26,23 +26,18 @@ const GroupHub: React.FC = () => {
 
   useEffect(() => {
     fetchRepos()
-      .then((repos: Repo[]) => {
-        // Convert repos → GroupOverview format for your grid
-        const mapped: GroupOverview[] = repos.map((repo) => ({
-          id: repo.id,
-          name: repo.name,
-          totalCommits: 0, // placeholder unless backend provides stats
-          students: [], // placeholder unless backend provides per-student data
-        }));
-
-        setGroups(mapped);
+      .then((res) => {
+      setGroups(res.data);
       })
       .catch(() => setError("Failed to load repos"));
   }, []);
-
-  const filtered = groups.filter((g) =>
-    g.name.toLowerCase().includes(search.toLowerCase())
-  );
+    
+  const transformed = groups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    totalCommits: g.totalCommits,
+    students: g.students
+  }));
 
   return (
     <div style={styles.root}>
@@ -63,13 +58,12 @@ const GroupHub: React.FC = () => {
           {error && <p style={styles.error}>{error}</p>}
 
           {/* Grid */}
-          <SquareGrid
-            groups={filtered.map((g) => ({
-              ...g,
-              // attach click navigation behavior if your grid supports it
-              onClick: () => navigate(`/ta-overall`),
-            }))}
-          />
+        <SquareGrid 
+          groups={transformed.map((g) => ({
+            ...g,
+            onClick: () => navigate(`/ta-overall`)
+          }))}
+        />
         </div>
       </div>
     </div>
