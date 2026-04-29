@@ -17,7 +17,16 @@ CREATE TABLE IF NOT EXISTS repos (
     description TEXT,
     namespace   VARCHAR(255),
     url         VARCHAR(500),
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_commits INT DEFAULT 0
+);
+
+CREATE TABLE contributors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    repo_id INT,
+    gitlab_user_id INT,
+    name VARCHAR(255),
+    commits INT DEFAULT 0
 );
 
 -- Individual commits synced from GitLab

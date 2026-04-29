@@ -3,6 +3,7 @@ from gitrepo.client import (
     get_all_commits_paginated,
     get_commit_stats,
     get_contributors,
+    get_group_projects,
 )
 from db import DbCursor
 from datetime import datetime
@@ -157,3 +158,48 @@ def get_all_student_stats(repo_db_id: int) -> list:
         }
         for row in rows
     ]
+
+
+#Jacob Methods
+def upsert_project_with_stats(project, contributors):
+    total_commits = sum(c.get("commits", 0) for c in contributors)
+
+    with DbCursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO repos (gitlab_id, name, total_commits)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                total_commits = VALUES(total_commits)
+            """,
+            (project["id"], project["name"], total_commits),
+        )
+        cursor.execute(
+            "DELETE FROM contributors WHERE repo_id = %s",
+            (project["id"],),
+        )
+
+        for c in contributors:
+            gitlab_user_id = c.get("id") or c.get("user_id") or None
+            name = c.get("name") or c.get("username") or "Unknown"
+
+            cursor.execute(
+                """
+                INSERT INTO contributors (repo_id, gitlab_user_id, name, commits)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (
+                    project["id"],
+                    gitlab_user_id,
+                    name,
+                    c.get("commits", 0),
+                ),
+            )
+
+def sync_all_projects():
+    projects = get_group_projects()
+    for p in projects:
+        project_id = p["id"]
+        contributors = get_contributors(project_id)
+        upsert_project_with_stats(p, contributors)

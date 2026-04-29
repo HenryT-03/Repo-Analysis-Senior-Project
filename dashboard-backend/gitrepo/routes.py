@@ -1,7 +1,7 @@
 import requests
 from flask import Blueprint, jsonify, request, g
 from auth.middleware import require_auth, require_role
-from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats
+from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects
 from gitrepo.client import get_project, get_group_projects, get_contributors, get_project_commits
 from db import DbCursor
 
@@ -115,31 +115,6 @@ def list_commits(repo_db_id):
 
     return jsonify(commits)
 
-# Methods Jacob Added, they don't use database. Will see how they perform
-@gitrepo_bp.route("/projects", methods=["GET"])
-def fetch_projects():
-    projects = get_group_projects()
-
-    result = []
-
-    for p in projects:
-        project_id = p["id"]
-
-        contributors = get_contributors(project_id)
-        total_commits = sum(c.get("commits", 0) for c in contributors)
-
-        result.append({
-            "name": p["name"],
-            "totalCommits": total_commits,
-            "students": contributors,
-            "id": p["id"]
-        })
-
-    return jsonify({
-        "count": len(result),
-        "data": result
-    })
-
 @gitrepo_bp.route("/projects/<int:project_id>/contributors", methods=["GET"])
 def fetch_contributors(project_id):
     """
@@ -158,3 +133,42 @@ def fetch_commits(project_id):
         return jsonify(commits)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+@gitrepo_bp.route("/syncProjects", methods=["POST"])
+@require_auth
+@require_role("instructor", "ta")
+def sync_projects():
+    sync_all_projects()
+    return jsonify({"message": "Sync completed"}), 200
+
+@gitrepo_bp.route("/projects", methods=["GET"])
+def fetch_projects():
+    with DbCursor() as cursor:
+        cursor.execute("SELECT gitlab_id, name, total_commits FROM repos")
+        repos = cursor.fetchall()
+
+        result = []
+
+        for r in repos:
+            cursor.execute(
+                """
+                SELECT id, name, commits
+                FROM contributors
+                WHERE repo_id = %s
+                """,
+                (r["gitlab_id"],),
+            )
+            contributors = cursor.fetchall()
+
+            result.append({
+                "id": r["gitlab_id"],
+                "name": r["name"],
+                "totalCommits": r["total_commits"],
+                "students": contributors
+            })
+
+    return jsonify({
+        "count": len(result),
+        "data": result
+    })

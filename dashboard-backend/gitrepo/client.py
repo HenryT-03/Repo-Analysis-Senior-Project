@@ -21,7 +21,7 @@ def get_group_projects() -> list[dict]:
     )
 
     resp.raise_for_status()
-    return resp.json()
+    return resp.json()        
 
 def get_project(project_path: str) -> dict:
     """Fetch project metadata by path (e.g. 'group/repo')."""
@@ -166,3 +166,4 @@ def get_project_commits(project_id: int) -> list:
         })
 
     return detailed_commits
+
