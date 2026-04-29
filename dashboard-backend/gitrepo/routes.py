@@ -1,7 +1,7 @@
 import requests
 from flask import Blueprint, jsonify, request, g
 from auth.middleware import require_auth, require_role
-from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects
+from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects, sync_project_commits, get_internal_repo_id, sync_all_commits, get_all_repos
 from gitrepo.client import get_project, get_group_projects, get_contributors, get_project_commits
 from db import DbCursor
 
@@ -127,12 +127,26 @@ def fetch_contributors(project_id):
     })
 
 @gitrepo_bp.route("/projects/<int:project_id>/commits", methods=["GET"])
-def fetch_commits(project_id):
-    try:
-        commits = get_project_commits(project_id)
-        return jsonify(commits)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+def get_commits(project_id):
+    repo_internal_id = get_internal_repo_id(project_id)
+
+    if not repo_internal_id:
+        return jsonify({"error": "Repo not found"}), 404
+
+    with DbCursor() as cursor:
+        cursor.execute(
+            """
+            SELECT sha, author_name, author_email, message,
+                   additions, deletions, branch, committed_at
+            FROM commits
+            WHERE repo_id = %s
+            ORDER BY committed_at DESC
+            """,
+            (repo_internal_id,),
+        )
+        commits = cursor.fetchall()
+
+    return jsonify(commits)
     
 
 @gitrepo_bp.route("/syncProjects", methods=["POST"])
@@ -142,6 +156,32 @@ def sync_projects():
     sync_all_projects()
     return jsonify({"message": "Sync completed"}), 200
 
+@gitrepo_bp.route("/projects/syncAllCommits", methods=["POST"])
+@require_auth
+@require_role("instructor", "ta")
+def sync_all_commits_route():
+    try:
+        result = sync_all_commits()
+
+        return jsonify({
+            "message": "Bulk commit sync completed",
+            "summary": result
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@gitrepo_bp.route("/projects/<int:project_id>/syncCommits", methods=["POST"])
+@require_auth
+@require_role("instructor", "ta")
+def sync_commits(project_id):
+    try:
+        sync_project_commits(project_id)
+        return jsonify({"message": "Commits synced"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 @gitrepo_bp.route("/projects", methods=["GET"])
 def fetch_projects():
     with DbCursor() as cursor:
@@ -172,3 +212,4 @@ def fetch_projects():
         "count": len(result),
         "data": result
     })
+

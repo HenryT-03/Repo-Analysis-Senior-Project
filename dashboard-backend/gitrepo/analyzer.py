@@ -4,9 +4,18 @@ from gitrepo.client import (
     get_commit_stats,
     get_contributors,
     get_group_projects,
+    get_project_commits,
 )
 from db import DbCursor
 from datetime import datetime
+import requests
+from config import GITLAB_URL, GITLAB_TOKEN, GITLAB_GROUP_NAME
+
+def _headers():
+    h = {"Content-Type": "application/json"}
+    if GITLAB_TOKEN:
+        h["PRIVATE-TOKEN"] = GITLAB_TOKEN
+    return h
 
 
 def sync_repo(project_path: str) -> dict:
@@ -203,3 +212,94 @@ def sync_all_projects():
         project_id = p["id"]
         contributors = get_contributors(project_id)
         upsert_project_with_stats(p, contributors)
+
+def sync_project_commits(project_id: int):
+    commits = get_project_commits(project_id)
+
+    repo_internal_id = get_internal_repo_id(project_id)
+
+    if not repo_internal_id:
+        raise Exception("Repo not found in DB. Run /syncProjects first.")
+
+    with DbCursor() as cursor:
+        for c in commits:
+            sha = c["id"]
+
+            detail_resp = requests.get(
+                f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits/{sha}",
+                headers=_headers(),
+                timeout=10,
+            )
+            detail_resp.raise_for_status()
+            detail = detail_resp.json()
+
+            cursor.execute(
+                """
+                INSERT INTO commits (
+                    sha, repo_id, author_name, author_email,
+                    message, additions, deletions,
+                    branch, committed_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    author_name = VALUES(author_name),
+                    author_email = VALUES(author_email),
+                    message = VALUES(message),
+                    additions = VALUES(additions),
+                    deletions = VALUES(deletions),
+                    branch = VALUES(branch),
+                    committed_at = VALUES(committed_at)
+                """,
+                (
+                    sha,
+                    repo_internal_id,
+                    c.get("author_name"),
+                    c.get("author_email"),
+                    c.get("title"),
+                    detail.get("stats", {}).get("additions", 0),
+                    detail.get("stats", {}).get("deletions", 0),
+                    "main", #need to replace this with actual branch later
+                    c.get("committed_date"),
+                ),
+            )
+
+def get_all_repos():
+    with DbCursor() as cursor:
+        cursor.execute("SELECT id, gitlab_id FROM repos")
+        return cursor.fetchall()
+
+def sync_all_commits():
+    repos = get_all_repos()
+
+    results = []
+    errors = []
+
+    for repo in repos:
+        gitlab_id = repo["gitlab_id"]
+
+        try:
+            sync_project_commits(gitlab_id)
+            results.append(gitlab_id)
+        except Exception as e:
+            errors.append({
+                "project_id": gitlab_id,
+                "error": str(e)
+            })
+
+    return {
+        "synced": len(results),
+        "failed": len(errors),
+        "errors": errors
+    }
+
+
+# Temporary helper function, need to rename gitlab_id to id later in commits table
+def get_internal_repo_id(gitlab_project_id: int):
+    with DbCursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM repos WHERE gitlab_id = %s",
+            (gitlab_project_id,),
+        )
+        row = cursor.fetchone()
+        return row["id"] if row else None
+    
