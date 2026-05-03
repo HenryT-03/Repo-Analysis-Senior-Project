@@ -36,7 +36,7 @@ const api = {
   },
   // Sync Repo
   syncRepo: async (repoId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/repos/${repoId}/sync`, { method: 'POST' });
+    return fetchWithAuth(`${API_BASE}/gitrepo/projects/${repoId}/syncCommits`, { method: 'POST' });
   },
 
   // Auth routes (no auth header needed)

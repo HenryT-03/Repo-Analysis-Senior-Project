@@ -237,36 +237,38 @@ const filteredRows = useMemo(() => {
                   opacity: loading ? 0.6 : 1,
                   pointerEvents: loading ? 'none' : 'auto'
                 }}
-                onClick={async () => {
-  if (!selectedRepoId) return;
+  onClick={async () => {
+    if (!selectedRepoId) return;
+    setLoading(true);
+    try {
+      await api.syncRepo(selectedRepoId);
 
-  setLoading(true);
-  try {
-    await api.syncRepo(selectedRepoId);
-    const commits = await api.getRepoCommits(selectedRepoId);
-    setCommitData(
-      Object.entries(
-        commits.reduce((acc: Record<string, Record<string, number>>, commit: any) => {
-          const time =
-            new Date(commit.committed_at).getHours().toString().padStart(2, "0") + ":00";
-          const student = commit.author_name || "Unknown";
+      const commits = await api.getRepoCommits(selectedRepoId);
+      const contributorsRes = await api.getRepoContributors(selectedRepoId);
 
-          acc[time] ||= {};
-          acc[time][student] = (acc[time][student] || 0) + 1;
-          return acc;
-        }, {})
-      )
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([time, data]) => ({ time, ...(data as Record<string, number>) }))
-    );
-    setRows(buildRowsFromCommits(commits, selectedRepoId));
-  } catch (err) {
-    console.error("Sync failed:", err);
-    setError("Failed to sync repo");
-  } finally {
-    setLoading(false);
-  }
-}}
+      setCommitData(
+        Object.entries(
+          commits.reduce((acc: Record<string, Record<string, number>>, commit: any) => {
+            const time =
+              new Date(commit.committed_at).getHours().toString().padStart(2, "0") + ":00";
+            const student = commit.author_name || "Unknown";
+            acc[time] ||= {};
+            acc[time][student] = (acc[time][student] || 0) + 1;
+            return acc;
+          }, {})
+        )
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([time, data]) => ({ time, ...(data as Record<string, number>) }))
+      );
+
+      setRows(buildRowsFromCommits(contributorsRes.contributors, selectedRepoId));
+    } catch (err) {
+      console.error("Sync failed:", err);
+      setError("Failed to sync repo");
+    } finally {
+      setLoading(false);
+    }
+  }}
               >
                 <RefreshCw style={styles.icon} /> {loading ? 'Syncing...' : 'Refresh'}
               </button>
