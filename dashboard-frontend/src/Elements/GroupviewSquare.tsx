@@ -19,6 +19,7 @@ type SquareProps = {
   id: number;
   totalCommits: number;
   students: Student[];
+  onClick?: () => void;
 };
 
 const GroupCard: React.FC<SquareProps> = ({ name, id, totalCommits, students }) => {

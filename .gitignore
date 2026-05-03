@@ -32,3 +32,4 @@ dashboard-backend/auth/__pycache__/routes.cpython-313.pyc
 dashboard-backend/gitrepo/__pycache__/routes.cpython-313.pyc
 dashboard-backend/users/__pycache__/routes.cpython-313.pyc
 *.pyc
+*.pyc

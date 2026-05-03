@@ -1,5 +1,5 @@
 import requests
-from config import GITLAB_URL, GITLAB_TOKEN
+from config import GITLAB_URL, GITLAB_TOKEN, GITLAB_GROUP_NAME
 
 def _headers():
     h = {"Content-Type": "application/json"}
@@ -7,6 +7,22 @@ def _headers():
         h["PRIVATE-TOKEN"] = GITLAB_TOKEN
     return h
 
+def get_group_projects() -> list[dict]:
+    """Fetch all projects in a GitLab group (e.g. 'cs309/309Spring2017')."""
+    
+    resp = requests.get(
+        f"{GITLAB_URL}/api/v4/groups/{GITLAB_GROUP_NAME}/projects",
+        headers=_headers(),
+        timeout=10,
+        params={
+            "per_page": 100,
+            "include_subgroups": True
+        }
+    )
+
+    resp.raise_for_status()
+    return resp.json()
+        
 
 def get_project(project_path: str) -> dict:
     """Fetch project metadata by path (e.g. 'group/repo')."""
@@ -105,3 +121,67 @@ def get_all_commits_paginated(project_id: int, author_email=None) -> list:
         all_commits.extend(batch)
         page += 1
     return all_commits
+
+
+#Jacob Methods
+def get_project_commits(project_id: int):
+    commits_resp = requests.get(
+        f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits",
+        headers=_headers(),
+        params={"per_page": 100},
+        timeout=10,
+    )
+    commits_resp.raise_for_status()
+
+    return commits_resp.json()
+
+
+def sync_project_commits(project_id: int):
+    commits = get_project_commits(project_id)
+
+    repo_internal_id = get_internal_repo_id(project_id)
+
+    if not repo_internal_id:
+        raise Exception("Repo not found in DB. Run /syncProjects first.")
+
+    with DbCursor() as cursor:
+        for c in commits:
+            sha = c["id"]
+
+            detail_resp = requests.get(
+                f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits/{sha}",
+                headers=_headers(),
+                timeout=10,
+            )
+            detail_resp.raise_for_status()
+            detail = detail_resp.json()
+
+            cursor.execute(
+                """
+                INSERT INTO commits (
+                    sha, repo_id, author_name, author_email,
+                    message, additions, deletions,
+                    branch, committed_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    author_name = VALUES(author_name),
+                    author_email = VALUES(author_email),
+                    message = VALUES(message),
+                    additions = VALUES(additions),
+                    deletions = VALUES(deletions),
+                    branch = VALUES(branch),
+                    committed_at = VALUES(committed_at)
+                """,
+                (
+                    sha,
+                    repo_internal_id,
+                    c.get("author_name"),
+                    c.get("author_email"),
+                    c.get("title"),
+                    detail.get("stats", {}).get("additions", 0),
+                    detail.get("stats", {}).get("deletions", 0),
+                    "main", #need to replace this with actual branch later
+                    c.get("committed_date"),
+                ),
+            )

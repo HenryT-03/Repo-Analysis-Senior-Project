@@ -237,5 +237,4 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: "2px",
   },
 };
-
 export default TopBar;

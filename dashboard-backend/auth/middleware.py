@@ -1,8 +1,12 @@
+import os
 from functools import wraps
+
+import requests
 from flask import request, jsonify, g
 import requests
 import os
 from db import DbCursor
+
 
 def require_auth(f):
     @wraps(f)
