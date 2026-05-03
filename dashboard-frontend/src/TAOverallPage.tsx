@@ -126,6 +126,7 @@ export default function TAOverallViewPage() {
   const [repos, setRepos] = useState<any[]>([]);
   const { repoId: selectedRepoId } = useParams();
   const [loading, setLoading] = useState(false);
+  const [attemptingSync, setAttemptingSync] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<TeamRow[]>([]);
   const [commitData, setCommitData] = useState<any[]>([]);
@@ -239,7 +240,7 @@ const filteredRows = useMemo(() => {
                 }}
   onClick={async () => {
     if (!selectedRepoId) return;
-    setLoading(true);
+    setAttemptingSync(true);
     try {
       await api.syncRepo(selectedRepoId);
 
@@ -266,11 +267,11 @@ const filteredRows = useMemo(() => {
       console.error("Sync failed:", err);
       setError("Failed to sync repo");
     } finally {
-      setLoading(false);
+      setAttemptingSync(false);
     }
   }}
               >
-                <RefreshCw style={styles.icon} /> {loading ? 'Syncing...' : 'Refresh'}
+                <RefreshCw style={styles.icon} /> {attemptingSync ? 'Syncing...' : 'Refresh'}
               </button>
               <button style={styles.button}>
                 <CalendarDays style={styles.icon} />

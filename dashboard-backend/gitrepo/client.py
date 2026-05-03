@@ -125,16 +125,31 @@ def get_all_commits_paginated(project_id: int, author_email=None) -> list:
 
 #Jacob Methods
 def get_project_commits(project_id: int):
-    commits_resp = requests.get(
-        f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits",
-        headers=_headers(),
-        params={"per_page": 100},
-        timeout=10,
-    )
-    commits_resp.raise_for_status()
+    commits = []
+    page = 1
 
-    return commits_resp.json()
+    while True:
+        resp = requests.get(
+            f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits",
+            headers=_headers(),
+            params={"per_page": 100, "page": page},
+            timeout=10,
+        )
+        resp.raise_for_status()
 
+        batch = resp.json()
+        if not batch:
+            break
+
+        commits.extend(batch)
+
+        # We know how many pages there will be, so iterte through them until done
+        total_pages = int(resp.headers.get("X-Total-Pages", 1))
+        if page >= total_pages:
+            break
+
+        page += 1
+    return commits
 
 def sync_project_commits(project_id: int):
     commits = get_project_commits(project_id)
