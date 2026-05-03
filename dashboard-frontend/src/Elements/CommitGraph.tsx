@@ -30,12 +30,14 @@ interface CommitGraphProps {
 const CommitGraph: React.FC<CommitGraphProps> = ({ data = defaultData, loading = false }) => {
   const chartData = data && data.length > 0 ? data : defaultData;
   
-  // Generate line colors dynamically based on available data keys
-  const getDataKeys = () => {
-    if (!chartData || chartData.length === 0) return [];
-    const keys = Object.keys(chartData[0]).filter(key => key !== 'time');
-    return keys;
-  };
+const getDataKeys = () => {
+  if (!chartData || chartData.length === 0) return [];
+  const keys = new Set<string>();
+  chartData.forEach(entry => 
+    Object.keys(entry).forEach(k => { if (k !== 'time') keys.add(k); })
+  );
+  return Array.from(keys);
+};
 
   const dataKeys = getDataKeys();
   const colors = ['#CC0000', '#FDCA2F', '#0066CC', '#00CC66', '#FF9900', '#9900FF'];

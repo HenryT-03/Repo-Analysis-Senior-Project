@@ -270,27 +270,20 @@ def get_all_repos():
 
 def sync_all_commits():
     repos = get_all_repos()
-
     results = []
     errors = []
 
-    for repo in repos:
+    for i, repo in enumerate(repos):
         gitlab_id = repo["gitlab_id"]
-
+        print(f"[{i+1}/{len(repos)}] Syncing repo {gitlab_id}...") 
         try:
             sync_project_commits(gitlab_id)
             results.append(gitlab_id)
+            print(f"Done")
         except Exception as e:
-            errors.append({
-                "project_id": gitlab_id,
-                "error": str(e)
-            })
-
-    return {
-        "synced": len(results),
-        "failed": len(errors),
-        "errors": errors
-    }
+            errors.append({"project_id": gitlab_id, "error": str(e)})
+            print(f"Failed: {e}")
+    return {"synced": len(results), "failed": len(errors), "errors": errors}
 
 
 # Temporary helper function, need to rename gitlab_id to id later in commits table

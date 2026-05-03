@@ -63,6 +63,23 @@ const summaryRows: TeamRow[] = [
   },
 ];
 
+const buildCommitChartData = (commits: any[]) => {
+  const timeMap: Record<string, Record<string, number>> = {};
+
+  commits.forEach((commit) => {
+    const date = new Date(commit.committed_at);
+    const time = `${date.toISOString().slice(0, 10)} ${date.getUTCHours().toString().padStart(2, "0")}:00`;
+    const student = commit.author_name || "Unknown";
+
+    timeMap[time] ||= {};
+    timeMap[time][student] = (timeMap[time][student] || 0) + 1;
+  });
+
+  return Object.entries(timeMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([time, data]) => ({ time, ...data }));
+};
+
 const unknownAuthors: UnknownAuthor[] = [];
 const kotlinFiles: KotlinFile[] = [];
 
@@ -162,27 +179,7 @@ useEffect(() => {
       
       setRows(buildRowsFromCommits(contributorsRes.contributors, selectedRepoId));
             
-      // build graph data
-      const timeMap = new Map<string, Record<string, number>>();
-
-      commits.forEach((commit: any) => {
-        const time =
-          new Date(commit.committed_at).getHours().toString().padStart(2, "0") + ":00";
-
-        if (!timeMap.has(time)) {
-          timeMap.set(time, {});
-        }
-
-        const student = commit.author_name || "Unknown";
-        const current = timeMap.get(time)!;
-        current[student] = (current[student] || 0) + 1;
-      });
-
-      const chartData = Array.from(timeMap.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([time, data]) => ({ time, ...data }));
-
-      setCommitData(chartData);
+      setCommitData(buildCommitChartData(commits));
 
     } catch (err) {
       console.error(err);
@@ -247,20 +244,7 @@ const filteredRows = useMemo(() => {
       const commits = await api.getRepoCommits(selectedRepoId);
       const contributorsRes = await api.getRepoContributors(selectedRepoId);
 
-      setCommitData(
-        Object.entries(
-          commits.reduce((acc: Record<string, Record<string, number>>, commit: any) => {
-            const time =
-              new Date(commit.committed_at).getHours().toString().padStart(2, "0") + ":00";
-            const student = commit.author_name || "Unknown";
-            acc[time] ||= {};
-            acc[time][student] = (acc[time][student] || 0) + 1;
-            return acc;
-          }, {})
-        )
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([time, data]) => ({ time, ...(data as Record<string, number>) }))
-      );
+      setCommitData(buildCommitChartData(commits));
 
       setRows(buildRowsFromCommits(contributorsRes.contributors, selectedRepoId));
     } catch (err) {
