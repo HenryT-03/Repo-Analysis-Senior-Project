@@ -11,6 +11,7 @@ export type AppConfig = {
   Demo4Start: string;
   Demo4End: string;
   ExpectedCommitsWeekly: number;
+  ExpectedMergesDemo: number;
   GITLAB_GROUP_NAME: string;
 };
 

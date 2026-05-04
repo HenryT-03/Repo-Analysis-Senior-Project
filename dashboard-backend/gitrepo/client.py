@@ -138,6 +138,7 @@ def get_config() -> dict:
         "Demo4End": config.Demo4End,
         "ExpectedCommitsWeekly": config.ExpectedCommitsWeekly,
         "GITLAB_GROUP_NAME": config.GITLAB_GROUP_NAME,
+        "ExpectedMergesDemo": config.ExpectedMergesDemo
     }
 
 def set_config(updates: dict) -> dict:
@@ -148,6 +149,7 @@ def set_config(updates: dict) -> dict:
         "Demo3Start", "Demo3End",
         "Demo4Start", "Demo4End",
         "ExpectedCommitsWeekly",
+        "ExpectedMergesDemo",
         "GITLAB_GROUP_NAME",
     }
     unknown = set(updates.keys()) - allowed

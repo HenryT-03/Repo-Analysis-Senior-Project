@@ -42,3 +42,4 @@ Demo4Start = "2017-04-19"
 Demo4End = "2017-05-19"
 
 ExpectedCommitsWeekly = 1
+ExpectedMergesDemo = 1

@@ -14,6 +14,7 @@ type Config = {
   Demo4Start: string;
   Demo4End: string;
   ExpectedCommitsWeekly: number;
+  ExpectedMergesDemo: number;
   GITLAB_GROUP_NAME: string;
 };
 
@@ -123,6 +124,20 @@ const handleSave = async () => {
                     <h2 style={styles.cardTitle}>General Settings</h2>
                     <p style={styles.cardSubtitle}>Global parameters for commit analysis</p>
                   </div>
+                    <div style={styles.cardBody}>
+                        <div style={styles.fieldRow}>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Expected Merges Per Demo</label>
+                            <input
+                            type="number"
+                            min={0}
+                            value={form.ExpectedMergesDemo}
+                            onChange={(e) => handleDateChange("ExpectedMergesDemo", e.target.value as any)}
+                            style={styles.textInput}
+                            />
+                        </div>
+                        </div>
+                    </div>
                   <div style={styles.cardBody}>
                     <div style={styles.fieldRow}>
                       <div style={styles.fieldGroup}>
