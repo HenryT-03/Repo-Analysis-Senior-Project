@@ -133,21 +133,31 @@ def get_commits(project_id):
     if not repo_internal_id:
         return jsonify({"error": "Repo not found"}), 404
 
+    start = request.args.get("start")  
+    end = request.args.get("end")     
+
+    query = """
+        SELECT sha, author_name, author_email, message,
+               additions, deletions, branch, committed_at
+        FROM commits
+        WHERE repo_id = %s
+    """
+    params = [repo_internal_id]
+
+    if start:
+        query += " AND committed_at >= %s"
+        params.append(start)
+    if end:
+        query += " AND committed_at <= %s"
+        params.append(end)
+
+    query += " ORDER BY committed_at DESC"
+
     with DbCursor() as cursor:
-        cursor.execute(
-            """
-            SELECT sha, author_name, author_email, message,
-                   additions, deletions, branch, committed_at
-            FROM commits
-            WHERE repo_id = %s
-            ORDER BY committed_at DESC
-            """,
-            (repo_internal_id,),
-        )
+        cursor.execute(query, params)
         commits = cursor.fetchall()
 
-    return jsonify(commits)
-    
+    return jsonify(commits)    
 
 @gitrepo_bp.route("/syncProjects", methods=["POST"])
 @require_auth

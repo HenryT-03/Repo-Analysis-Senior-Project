@@ -26,7 +26,7 @@ const Dashboard: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const commits = await api.getRepoCommits(repoId);
+        const commits = await api.getRepoCommits(repoId, { start: "2017-01-10", end: "2017-03-01" });
 
         // Transform commits → chart format
         const timeMap = new Map<string, Record<string, number>>();

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Search, RefreshCw, CalendarDays } from 'lucide-react';
+import { Search, RefreshCw, ChevronDown, CalendarDays } from 'lucide-react';
 import Sidebar from "./Elements/HubSidebar";
 import TopBar from "./Elements/TopBar";
 import CommitGraph from "./Elements/CommitGraph";
@@ -89,44 +89,66 @@ function ratingBg(rating: TeamRow['commitRating']) {
   return '#f5c1c1';
 }
 
-function buildRowsFromCommits(contributors: any[], teamLabel: string): TeamRow[] {
-  return contributors.map((c) => {
-    const student = c.name || "Unknown";
-    const username =
-      c.email?.split("@")[0] ||
-      student.toLowerCase().replace(/\s+/g, "");
+function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: string): TeamRow[] {
+  // Aggregate per-author stats from the filtered commits
+  const authorMap: Record<string, {
+    name: string;
+    email: string;
+    totalCommits: number;
+    additions: number;
+    deletions: number;
+  }> = {};
 
-    const total = Number(c.commits ?? 0);
-    const additions = Number(c.additions ?? 0);
-    const deletions = Number(c.deletions ?? 0);
+  commits.forEach((c) => {
+    const key = c.author_email || c.author_name;
+    if (!authorMap[key]) {
+      authorMap[key] = {
+        name: c.author_name || "Unknown",
+        email: c.author_email || "",
+        totalCommits: 0,
+        additions: 0,
+        deletions: 0,
+      };
+    }
+    authorMap[key].totalCommits += 1;
+    authorMap[key].additions += c.additions ?? 0;
+    authorMap[key].deletions += c.deletions ?? 0;
+  });
 
+  // Fall back to contributors list for anyone with 0 commits in range
+  contributors.forEach((c) => {
+    const key = c.email || c.name;
+    if (!authorMap[key]) {
+      authorMap[key] = {
+        name: c.name || "Unknown",
+        email: c.email || "",
+        totalCommits: 0,
+        additions: 0,
+        deletions: 0,
+      };
+    }
+  });
+
+  return Object.values(authorMap).map((c) => {
+    const total = c.totalCommits;
     return {
       team: teamLabel,
-      student,
-      username,
+      student: c.name,
+      username: c.email?.split("@")[0] || c.name.toLowerCase().replace(/\s+/g, ""),
       role: Math.random() > 0.5 ? "FE" : "BE",
-
       totalCommits: total,
       meaningful: Math.floor(Math.random() * 2),
       merge: Math.floor(Math.random() * 2),
       trivial: Math.floor(Math.random() * 2),
-
-      commitRating:
-        total >= 5 ? "Excellent" :
-        total >= 2 ? "Good" : "Poor",
-
-      linesPlusMinus: `+${additions}/-${deletions}`,
-
+      commitRating: total >= 5 ? "Excellent" : total >= 2 ? "Good" : "Poor",
+      linesPlusMinus: `+${c.additions}/-${c.deletions}`,
       mergedToMain: Math.random() > 0.5 ? "YES" : "NO",
-
       issuesCreated: Math.floor(Math.random() * 10),
       issuesUpdated: Math.floor(Math.random() * 10),
-
       branches: Math.random() > 0.5 ? "YES" : "NO",
       isKotlin: "NO",
       feBeConsist: "NO",
-
-      autoNotes: total === 0 ? "No commits yet" : ""
+      autoNotes: total === 0 ? "No commits in this period" : "",
     };
   });
 }
@@ -139,7 +161,15 @@ function yesNoBg(value: string) {
 
 export default function TAOverallViewPage() {
   const [search, setSearch] = useState('');
-  const [timeRange, setTimeRange] = useState('2026-02-10 to 2026-02-17');
+  const [timeRange, setTimeRange] = useState("Demo 1");
+  const demoRanges: Record<string, { start: string; end: string }> = {
+    "Demo 1": { start: "2017-01-06", end: "2017-02-27" },
+    "Demo 2": { start: "2017-02-28", end: "2017-03-28" },
+    "Demo 3": { start: "2017-03-29", end: "2017-04-18" },
+    "Demo 4": { start: "2017-04-19", end: "2017-05-19" },
+  };
+  const options = Object.keys(demoRanges);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [repos, setRepos] = useState<any[]>([]);
   const { repoId: selectedRepoId } = useParams();
   const [loading, setLoading] = useState(false);
@@ -163,7 +193,14 @@ export default function TAOverallViewPage() {
     fetchRepos();
   }, []);
 
-  // Fetch stats when repo is selected
+// Initiating demo selection
+useEffect(() => {
+  const handleClickOutside = () => setDropdownOpen(false);
+  if (dropdownOpen) document.addEventListener("click", handleClickOutside);
+  return () => document.removeEventListener("click", handleClickOutside);
+}, [dropdownOpen]);
+
+// Refresh data when either selectedRepoId or TimeRange changes
 useEffect(() => {
   if (!selectedRepoId) return;
 
@@ -171,16 +208,14 @@ useEffect(() => {
     setLoading(true);
     setError(null);
 
-    try {
-      if (selectedRepoId == null) return;
-      
-      const commits = await api.getRepoCommits(selectedRepoId);
-      const contributorsRes = await api.getRepoContributors(selectedRepoId);
-      
-      setRows(buildRowsFromCommits(contributorsRes.contributors, selectedRepoId));
-            
-      setCommitData(buildCommitChartData(commits));
+    const { start, end } = demoRanges[timeRange];
 
+    try {
+      const commits = await api.getRepoCommits(selectedRepoId, { start, end });
+      const contributorsRes = await api.getRepoContributors(selectedRepoId);
+
+      setRows(buildRowsFromCommits(commits, contributorsRes.contributors, selectedRepoId));
+      setCommitData(buildCommitChartData(commits));
     } catch (err) {
       console.error(err);
       setError("Failed to load commit data");
@@ -192,7 +227,7 @@ useEffect(() => {
   };
 
   fetchData();
-}, [selectedRepoId]);
+}, [selectedRepoId, timeRange]);
 
 const filteredRows = useMemo(() => {
   const q = search.trim().toLowerCase();
@@ -240,12 +275,13 @@ const filteredRows = useMemo(() => {
     try {
       await api.syncRepo(selectedRepoId);
 
-      const commits = await api.getRepoCommits(selectedRepoId);
+      const { start, end } = demoRanges[timeRange];
+      const commits = await api.getRepoCommits(selectedRepoId, { start, end });
       const contributorsRes = await api.getRepoContributors(selectedRepoId);
 
       setCommitData(buildCommitChartData(commits));
 
-      setRows(buildRowsFromCommits(contributorsRes.contributors, selectedRepoId));
+      setRows(buildRowsFromCommits(commits, contributorsRes.contributors, selectedRepoId));
     } catch (err) {
       console.error("Sync failed:", err);
       setError("Failed to sync repo");
@@ -256,10 +292,49 @@ const filteredRows = useMemo(() => {
               >
                 <RefreshCw style={styles.icon} /> {attemptingSync ? 'Syncing...' : 'Refresh'}
               </button>
-              <button style={styles.button}>
-                <CalendarDays style={styles.icon} />
-                {timeRange}
-              </button>
+              <div style={{ position: "relative" }}>
+                  <button
+                    style={styles.button}
+                    onClick={(e) => { e.stopPropagation(); setDropdownOpen((o) => !o); }}
+                  >
+                    <CalendarDays style={styles.icon} />
+                  {timeRange}
+                  <ChevronDown style={{ width: 14, height: 14 }} />
+                </button>
+
+                {dropdownOpen && (
+                  <div style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    left: 0,
+                    backgroundColor: "#822433",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    zIndex: 100,
+                    minWidth: "100%",
+                  }}>
+                    {options.map((opt) => (
+                      <div
+                        key={opt}
+                        onClick={() => { setTimeRange(opt); setDropdownOpen(false); }}
+                        style={{
+                          padding: "8px 12px",
+                          color: "white",
+                          fontFamily: "monospace",
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          backgroundColor: timeRange === opt ? "rgba(0,0,0,0.2)" : "transparent",
+                          whiteSpace: "nowrap",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.15)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = timeRange === opt ? "rgba(0,0,0,0.2)" : "transparent")}
+                      >
+                        {opt}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {repos.length > 0 && (
                 <select 
                   value={selectedRepoId || ''} 
