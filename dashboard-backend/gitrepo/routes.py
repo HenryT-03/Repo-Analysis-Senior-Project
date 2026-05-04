@@ -285,3 +285,90 @@ def set_config_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     
+    
+@gitrepo_bp.route("/debug/all", methods=["GET"])
+def debug_all():
+    """
+    Fetch all projects with nested contributors and commits from the DB.
+    """
+    try:
+        with DbCursor() as cursor:
+            cursor.execute("SELECT * FROM repos")
+            repos = cursor.fetchall()
+
+            cursor.execute("SELECT * FROM contributors")
+            contributors = cursor.fetchall()
+
+            cursor.execute("SELECT * FROM commits")
+            commits = cursor.fetchall()
+
+            cursor.execute("SELECT * FROM issues")
+            issues = cursor.fetchall()
+
+        # Group commits by repo_id
+        commits_by_repo = {}
+        for commit in commits:
+            repo_id = commit["repo_id"]
+            commits_by_repo.setdefault(repo_id, []).append(commit)
+
+        # Group contributors by repo_id
+        contributors_by_repo = {}
+        for contributor in contributors:
+            repo_id = contributor["repo_id"]
+            contributors_by_repo.setdefault(repo_id, []).append(contributor)
+
+        # Group issues by repo_id
+        issues_by_repo = {}
+        for issue in issues:
+            repo_id = issue["repo_id"]
+            issues_by_repo.setdefault(repo_id, []).append(issue)
+
+        
+        commits_by_email = {}
+        for commit in commits:
+            repo_id = commit["repo_id"]  # this is the internal DB id
+            email = commit.get("author_email")
+            commits_by_email.setdefault((repo_id, email), []).append(commit)
+
+        with DbCursor() as cursor:
+            cursor.execute("SELECT id, gitlab_id FROM repos")
+            repo_id_map = {row["gitlab_id"]: row["id"] for row in cursor.fetchall()}
+
+        result = []
+        for repo in repos:
+            gitlab_id = repo["gitlab_id"]
+            internal_id = repo_id_map.get(gitlab_id)
+
+            nested_contributors = []
+            for c in contributors_by_repo.get(gitlab_id, []):
+                email = c.get("email")
+                nested_contributors.append({
+
+                    "id": c["id"],
+                    "name": c["name"],
+                    "email": email,
+                    "commits": c["commits"],
+                    "additions": c.get("additions", 0),
+                    "deletions": c.get("deletions", 0),
+                    "commit_history": commits_by_email.get((internal_id, email), []),
+                })
+            result.append({
+                "id": repo_id,
+                "name": repo["name"],
+                "total_commits": repo["total_commits"],
+                "contributors": nested_contributors,
+                "issues": issues_by_repo.get(repo_id, []),
+            })
+
+        return jsonify({
+            "counts": {
+                "repos": len(repos),
+                "contributors": len(contributors),
+                "commits": len(commits),
+                "issues": len(issues),
+            },
+            "repos": result,
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
