@@ -29,6 +29,18 @@ CREATE TABLE contributors (
     commits INT DEFAULT 0
 );
 
+CREATE TABLE issues (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    repo_id INT NOT NULL,
+    author_name VARCHAR(255),
+    author_email VARCHAR(255) NOT NULL,
+    title TEXT,
+    state VARCHAR(50),
+    created_at DATETIME,
+    updated_at DATETIME,
+    closed_at DATETIME,
+    UNIQUE KEY unique_issue (author_email, repo_id, created_at)
+);
 -- Individual commits synced from GitLab
 CREATE TABLE IF NOT EXISTS commits (
     id           INT AUTO_INCREMENT PRIMARY KEY,
@@ -42,6 +54,8 @@ CREATE TABLE IF NOT EXISTS commits (
     branch       VARCHAR(255),       -- branch the commit was pushed to
     committed_at DATETIME,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_merge BOOLEAN DEFAULT FALSE,
+    merged_to_main BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (repo_id) REFERENCES repos(id) ON DELETE CASCADE,
     INDEX idx_repo_author (repo_id, author_email),
     INDEX idx_committed_at (committed_at)

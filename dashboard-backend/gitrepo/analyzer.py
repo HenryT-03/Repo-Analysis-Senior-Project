@@ -232,15 +232,16 @@ def sync_project_commits(project_id: int):
             )
             detail_resp.raise_for_status()
             detail = detail_resp.json()
+            is_merge = len(detail.get("parent_ids", [])) > 1
 
             cursor.execute(
                 """
                 INSERT INTO commits (
                     sha, repo_id, author_name, author_email,
                     message, additions, deletions,
-                    branch, committed_at
+                    branch, committed_at, is_merge
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     author_name = VALUES(author_name),
                     author_email = VALUES(author_email),
@@ -248,7 +249,8 @@ def sync_project_commits(project_id: int):
                     additions = VALUES(additions),
                     deletions = VALUES(deletions),
                     branch = VALUES(branch),
-                    committed_at = VALUES(committed_at)
+                    committed_at = VALUES(committed_at),
+                    is_merge = VALUES(is_merge)
                 """,
                 (
                     sha,
@@ -258,26 +260,63 @@ def sync_project_commits(project_id: int):
                     c.get("title"),
                     detail.get("stats", {}).get("additions", 0),
                     detail.get("stats", {}).get("deletions", 0),
-                    "main", #need to replace this with actual branch later
+                    "main",
                     c.get("committed_date"),
+                    is_merge,
                 ),
             )
+
+def sync_project_issues(project_id: int):
+    resp = requests.get(
+        f"{GITLAB_URL}/api/v4/projects/{project_id}/issues",
+        headers=_headers(),
+        params={"per_page": 100},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    issues = resp.json()
+
+    repo_internal_id = get_internal_repo_id(project_id)
+    with DbCursor() as cursor:
+        for issue in issues:
+            cursor.execute("""
+                INSERT INTO issues (
+                    gitlab_id, repo_id, author_name, author_email,
+                    title, state, created_at, updated_at, closed_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    state = VALUES(state),
+                    updated_at = VALUES(updated_at),
+                    closed_at = VALUES(closed_at)
+            """, (
+                issue["iid"],
+                repo_internal_id,
+                issue["author"]["name"],
+                issue["author"].get("email", ""),
+                issue["title"],
+                issue["state"],
+                issue["created_at"],
+                issue["updated_at"],
+                issue.get("closed_at"),
+            ))
+
 
 def get_all_repos():
     with DbCursor() as cursor:
         cursor.execute("SELECT id, gitlab_id FROM repos")
         return cursor.fetchall()
 
-def sync_all_commits():
+def sync_all_commitsIssues():
     repos = get_all_repos()
     results = []
     errors = []
-
     for i, repo in enumerate(repos):
         gitlab_id = repo["gitlab_id"]
-        print(f"[{i+1}/{len(repos)}] Syncing repo {gitlab_id}...") 
+        print(f"[{i+1}/{len(repos)}] Syncing repo {gitlab_id}...")
         try:
             sync_project_commits(gitlab_id)
+            sync_project_issues(gitlab_id)
             results.append(gitlab_id)
             print(f"Done")
         except Exception as e:

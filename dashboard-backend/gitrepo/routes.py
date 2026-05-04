@@ -1,7 +1,7 @@
 import requests
 from flask import Blueprint, jsonify, request, g
 from auth.middleware import require_auth, require_role
-from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects, sync_project_commits, get_internal_repo_id, sync_all_commits, get_all_repos
+from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects, sync_project_commits, get_internal_repo_id, sync_all_commitsIssues, get_all_repos, sync_project_issues
 from gitrepo.client import get_project, get_group_projects, get_contributors, get_project_commits, get_config, set_config
 from db import DbCursor
 
@@ -171,7 +171,7 @@ def sync_projects():
 @require_role("instructor", "ta")
 def sync_all_commits_route():
     try:
-        result = sync_all_commits()
+        result = sync_all_commitsIssues()
 
         return jsonify({
             "message": "Bulk commit sync completed",
@@ -188,10 +188,11 @@ def sync_all_commits_route():
 def sync_commits(project_id):
     try:
         sync_project_commits(project_id)
-        return jsonify({"message": "Commits synced"}), 200
+        sync_project_issues(project_id)  # ← add this
+        return jsonify({"message": "Commits and issues synced"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+        
 @gitrepo_bp.route("/projects", methods=["GET"])
 def fetch_projects():
     with DbCursor() as cursor:
