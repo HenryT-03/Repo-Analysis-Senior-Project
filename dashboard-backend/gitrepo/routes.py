@@ -133,31 +133,70 @@ def get_commits(project_id):
     if not repo_internal_id:
         return jsonify({"error": "Repo not found"}), 404
 
-    start = request.args.get("start")  
-    end = request.args.get("end")     
+    start = request.args.get("start")
+    end = request.args.get("end")
 
-    query = """
+    commit_query = """
         SELECT sha, author_name, author_email, message,
-               additions, deletions, branch, committed_at
+               additions, deletions, branch, committed_at, is_merge
         FROM commits
         WHERE repo_id = %s
     """
     params = [repo_internal_id]
 
     if start:
-        query += " AND committed_at >= %s"
+        commit_query += " AND committed_at >= %s"
         params.append(start)
     if end:
-        query += " AND committed_at <= %s"
+        commit_query += " AND committed_at <= %s"
         params.append(end)
 
-    query += " ORDER BY committed_at DESC"
+    commit_query += " ORDER BY committed_at DESC"
+
+    issue_query = """
+        SELECT author_email,
+               SUM(1) as issues_created,
+               SUM(CASE WHEN state = 'closed' THEN 1 ELSE 0 END) as issues_closed,
+               SUM(CASE WHEN updated_at != created_at THEN 1 ELSE 0 END) as issues_updated
+        FROM issues
+        WHERE repo_id = %s
+    """
+    issue_params = [repo_internal_id]
+
+    if start:
+        issue_query += " AND created_at >= %s"
+        issue_params.append(start)
+    if end:
+        issue_query += " AND created_at <= %s"
+        issue_params.append(end)
+
+    issue_query += " GROUP BY author_email"
 
     with DbCursor() as cursor:
-        cursor.execute(query, params)
+        cursor.execute(commit_query, params)
         commits = cursor.fetchall()
 
-    return jsonify(commits)    
+        cursor.execute(issue_query, issue_params)
+        issue_rows = cursor.fetchall()
+
+    issue_map = {
+        row["author_email"]: {
+            "issues_created": row["issues_created"],
+            "issues_closed": row["issues_closed"],
+            "issues_updated": row["issues_updated"],
+        }
+        for row in issue_rows
+    }
+    for commit in commits:
+        email = commit.get("author_email", "")
+        stats = issue_map.get(email, {
+            "issues_created": 0,
+            "issues_closed": 0,
+            "issues_updated": 0,
+        })
+        commit.update(stats)
+
+    return jsonify(commits)
 
 @gitrepo_bp.route("/syncProjects", methods=["POST"])
 @require_auth

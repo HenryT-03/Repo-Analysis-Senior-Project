@@ -90,13 +90,15 @@ function ratingBg(rating: TeamRow['commitRating']) {
 }
 
 function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: string): TeamRow[] {
-  // Aggregate per-author stats from the filtered commits
   const authorMap: Record<string, {
     name: string;
     email: string;
     totalCommits: number;
+    mergeCommits: number;
     additions: number;
     deletions: number;
+    issuesCreated: number;
+    issuesUpdated: number;
   }> = {};
 
   commits.forEach((c) => {
@@ -106,16 +108,30 @@ function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: st
         name: c.author_name || "Unknown",
         email: c.author_email || "",
         totalCommits: 0,
+        mergeCommits: 0,
         additions: 0,
         deletions: 0,
+        issuesCreated: c.issues_created ?? 0,
+        issuesUpdated: c.issues_updated ?? 0,
       };
     }
     authorMap[key].totalCommits += 1;
+    authorMap[key].mergeCommits += c.is_merge ? 1 : 0;
     authorMap[key].additions += c.additions ?? 0;
     authorMap[key].deletions += c.deletions ?? 0;
+    // Take the max seen — since issue counts are per-author totals
+    // attached to every commit, not per-commit
+    authorMap[key].issuesCreated = Math.max(
+      authorMap[key].issuesCreated,
+      c.issues_created ?? 0
+    );
+    authorMap[key].issuesUpdated = Math.max(
+      authorMap[key].issuesUpdated,
+      c.issues_updated ?? 0
+    );
   });
 
-  // Fall back to contributors list for anyone with 0 commits in range
+  // Add contributors with 0 commits in range
   contributors.forEach((c) => {
     const key = c.email || c.name;
     if (!authorMap[key]) {
@@ -123,31 +139,35 @@ function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: st
         name: c.name || "Unknown",
         email: c.email || "",
         totalCommits: 0,
+        mergeCommits: 0,
         additions: 0,
         deletions: 0,
+        issuesCreated: 0,
+        issuesUpdated: 0,
       };
     }
   });
 
   return Object.values(authorMap).map((c) => {
     const total = c.totalCommits;
+    const meaningful = total - c.mergeCommits;
     return {
       team: teamLabel,
       student: c.name,
       username: c.email?.split("@")[0] || c.name.toLowerCase().replace(/\s+/g, ""),
-      role: Math.random() > 0.5 ? "FE" : "BE",
+      role: "BE" as const,
       totalCommits: total,
-      meaningful: Math.floor(Math.random() * 2),
-      merge: Math.floor(Math.random() * 2),
-      trivial: Math.floor(Math.random() * 2),
+      meaningful,
+      merge: c.mergeCommits,
+      trivial: 0,
       commitRating: total >= 5 ? "Excellent" : total >= 2 ? "Good" : "Poor",
       linesPlusMinus: `+${c.additions}/-${c.deletions}`,
-      mergedToMain: Math.random() > 0.5 ? "YES" : "NO",
-      issuesCreated: Math.floor(Math.random() * 10),
-      issuesUpdated: Math.floor(Math.random() * 10),
-      branches: Math.random() > 0.5 ? "YES" : "NO",
-      isKotlin: "NO",
-      feBeConsist: "NO",
+      mergedToMain: "N/A" as const,
+      issuesCreated: c.issuesCreated,
+      issuesUpdated: c.issuesUpdated,
+      branches: "N/A" as const,
+      isKotlin: "NO" as const,
+      feBeConsist: "NO" as const,
       autoNotes: total === 0 ? "No commits in this period" : "",
     };
   });
@@ -370,7 +390,7 @@ const filteredRows = useMemo(() => {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.headerRow}>
-                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Commit Rating', 'Lines +/-', 'Merged to Main?', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
+                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Commit Rating', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
                       <th key={h} style={styles.headerCell}>{h}</th>
                     ))}
                   </tr>
@@ -384,11 +404,10 @@ const filteredRows = useMemo(() => {
                       <td style={styles.cell}>{row.role}</td>
                       <td style={styles.cell}>{row.totalCommits}</td>
                       <td style={styles.cell}>{row.meaningful}</td>
-                      <td style={styles.cell}>{row.merge}</td>
+                      <td style={{ ...styles.cell, backgroundColor: yesNoBg(row.merge > 1 ? "YES" : "NO") }}>{row.merge}</td>
                       <td style={styles.cell}>{row.trivial}</td>
                       <td style={{ ...styles.cell, backgroundColor: ratingBg(row.commitRating) }}>{row.commitRating}</td>
                       <td style={styles.cell}>{row.linesPlusMinus}</td>
-                      <td style={{ ...styles.cell, backgroundColor: yesNoBg(row.mergedToMain) }}>{row.mergedToMain}</td>
                       <td style={styles.cell}>{row.issuesCreated}</td>
                       <td style={styles.cell}>{row.issuesUpdated}</td>
                       <td style={styles.cell}>{row.autoNotes || ''}</td>
