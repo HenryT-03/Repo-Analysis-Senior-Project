@@ -62,6 +62,18 @@ const handleSync = async () => {
     totalCommits: g.totalCommits,
     students: g.students
   }));
+  
+  const filtered = transformed.filter((g) => {
+  const q = search.trim().toLowerCase();
+  if (!q) return true;
+  
+  const nameMatch = g.name.toLowerCase().includes(q);
+  const studentMatch = g.students?.some((s) =>
+    s.name.toLowerCase().includes(q)
+  );
+  
+  return nameMatch || studentMatch;
+});
 
   return (
     <div style={styles.root}>
@@ -94,11 +106,9 @@ const handleSync = async () => {
         {loading ? (
           <LoadingSpinner />
         ) : (
-          <SquareGrid 
-            groups={transformed.map((g) => ({
-              ...g,
-            }))}
-          />
+        <SquareGrid
+          groups={filtered.map((g) => ({ ...g }))}
+        />
         )}
         </div>
       </div>
