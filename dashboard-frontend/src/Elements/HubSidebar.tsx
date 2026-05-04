@@ -1,18 +1,24 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const CARDINAL = "#822433";
-
 const NAV_ITEMS = ["Dashboard", "Site Config"];
 
+const NAV_PATHS: Record<string, string> = {
+  "Dashboard": "/dashboard",
+  "Site Config": "/config",
+};
+
 const HubSidebar: React.FC = () => {
-  const [active, setActive] = useState("Dashboard");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const active = NAV_ITEMS.find(
+    (item) => location.pathname === NAV_PATHS[item]
+  ) ?? "Dashboard";
 
   const handleNav = (item: string) => {
-    setActive(item);
-    if (item === "Dashboard") navigate("/");
-    if (item === "Site Config") navigate("/config");
+    navigate(NAV_PATHS[item]);
   };
 
   return (

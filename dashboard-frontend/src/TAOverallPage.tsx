@@ -273,8 +273,12 @@ const filteredRows = useMemo(() => {
         <div style={styles.content}>
           <div style={styles.container}>
             <div style={styles.header}>
-              <h1 style={styles.title}>COMS 309 Weekly Summary: 2026-02-10 to 2026-02-17</h1>
-              <p style={styles.subtitle}>TA / instructor overview modeled after the spreadsheet layout</p>
+            <h1 style={styles.title}>
+              {repos.find(r => String(r.id) === String(selectedRepoId))?.name ?? "Viewing Repo"} — {timeRange}
+            </h1>
+            <p style={styles.subtitle}>
+              {demoRanges[timeRange].start} to {demoRanges[timeRange].end}
+            </p>
             </div>
 
             <div style={styles.controls}>
@@ -358,21 +362,7 @@ const filteredRows = useMemo(() => {
                     ))}
                   </div>
                 )}
-              </div>
-              {repos.length > 0 && (
-                <select 
-                  value={selectedRepoId || ''} 
-                  style={styles.groupSelect}
-                >
-                  <option value="">Select Repo</option>
-                  {repos.map((repo) => (
-                    <option key={repo.id} value={repo.id}>
-                      {repo.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-             
+              </div>             
             </div>
 
             {error && (
