@@ -11,9 +11,8 @@ const HubSidebar: React.FC = () => {
 
   const handleNav = (item: string) => {
     setActive(item);
-    if (item === "Dashboard") {
-      navigate("/");
-    }
+    if (item === "Dashboard") navigate("/");
+    if (item === "Site Config") navigate("/config");
   };
 
   return (

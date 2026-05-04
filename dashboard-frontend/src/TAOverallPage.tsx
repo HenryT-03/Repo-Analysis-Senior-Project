@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Search, RefreshCw, ChevronDown, CalendarDays } from 'lucide-react';
 import Sidebar from "./Elements/HubSidebar";
-import TopBar from "./Elements/TopBar";
 import CommitGraph from "./Elements/CommitGraph";
 import api from "./services/api";
 import { useParams } from "react-router-dom";
+import { ConfigProvider, useConfig } from './ConfigContext';
 
 type TeamRow = {
   team: string;
@@ -160,13 +160,17 @@ function yesNoBg(value: string) {
 }
 
 export default function TAOverallViewPage() {
+  const configCtx = useConfig();
+  const config = configCtx?.config;
+
   const [search, setSearch] = useState('');
   const [timeRange, setTimeRange] = useState("Demo 1");
+  
   const demoRanges: Record<string, { start: string; end: string }> = {
-    "Demo 1": { start: "2017-01-06", end: "2017-02-27" },
-    "Demo 2": { start: "2017-02-28", end: "2017-03-28" },
-    "Demo 3": { start: "2017-03-29", end: "2017-04-18" },
-    "Demo 4": { start: "2017-04-19", end: "2017-05-19" },
+    "Demo 1": { start: config?.Demo1Start ?? "", end: config?.Demo1End ?? "" },
+    "Demo 2": { start: config?.Demo2Start ?? "", end: config?.Demo2End ?? "" },
+    "Demo 3": { start: config?.Demo3Start ?? "", end: config?.Demo3End ?? "" },
+    "Demo 4": { start: config?.Demo4Start ?? "", end: config?.Demo4End ?? "" },
   };
   const options = Object.keys(demoRanges);
   const [dropdownOpen, setDropdownOpen] = useState(false);

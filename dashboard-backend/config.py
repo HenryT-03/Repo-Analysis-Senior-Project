@@ -31,3 +31,14 @@ DB_CONFIG = {
     "connection_timeout": 10,
     "pool_name": "aiven_pool",
 }
+
+Demo1Start = "2017-01-01"
+Demo1End = "2017-02-27"
+Demo2Start = "2017-02-28"
+Demo2End = "2017-03-28"
+Demo3Start ="2017-03-29"
+Demo3End = "2017-04-18"
+Demo4Start = "2017-04-19"
+Demo4End = "2017-05-19"
+
+ExpectedCommitsWeekly = 1

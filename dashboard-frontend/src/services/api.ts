@@ -46,6 +46,18 @@ const api = {
       return fetchWithAuth(`${API_BASE}/gitrepo/syncProjects`, { method: 'POST'})
     },
 
+  // Config routes
+  getConfig: async () => {
+    return fetchWithAuth(`${API_BASE}/gitrepo/config`);
+  },
+  setConfig: async (data: Record<string, any>) => {
+    return fetchWithAuth(`${API_BASE}/gitrepo/config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+
   // Auth routes (no auth header needed)
   signup: async (email: string, password: string, name: string) => {
     const response = await fetch(`${API_BASE}/auth/signup`, {
@@ -66,6 +78,7 @@ const api = {
     if (!response.ok) throw new Error('Login failed');
     return response.json();
   }
+  
 };
 
 export default api;

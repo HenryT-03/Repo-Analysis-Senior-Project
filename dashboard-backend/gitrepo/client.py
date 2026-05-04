@@ -1,4 +1,5 @@
 import requests
+import config
 from config import GITLAB_URL, GITLAB_TOKEN, GITLAB_GROUP_NAME
 
 def _headers():
@@ -124,6 +125,40 @@ def get_all_commits_paginated(project_id: int, author_email=None) -> list:
 
 
 #Jacob Methods
+def get_config() -> dict:
+    """Return all global configuration values."""
+    return {
+        "Demo1Start": config.Demo1Start,
+        "Demo1End": config.Demo1End,
+        "Demo2Start": config.Demo2Start,
+        "Demo2End": config.Demo2End,
+        "Demo3Start": config.Demo3Start,
+        "Demo3End": config.Demo3End,
+        "Demo4Start": config.Demo4Start,
+        "Demo4End": config.Demo4End,
+        "ExpectedCommitsWeekly": config.ExpectedCommitsWeekly,
+        "GITLAB_GROUP_NAME": config.GITLAB_GROUP_NAME,
+    }
+
+def set_config(updates: dict) -> dict:
+    """Update one or more global configuration values. Returns the updated config."""
+    allowed = {
+        "Demo1Start", "Demo1End",
+        "Demo2Start", "Demo2End",
+        "Demo3Start", "Demo3End",
+        "Demo4Start", "Demo4End",
+        "ExpectedCommitsWeekly",
+        "GITLAB_GROUP_NAME",
+    }
+    unknown = set(updates.keys()) - allowed
+    if unknown:
+        raise ValueError(f"Unknown config keys: {unknown}")
+
+    for key, value in updates.items():
+        setattr(config, key, value)
+    return get_config()
+
+
 def get_project_commits(project_id: int):
     commits = []
     page = 1
@@ -150,53 +185,3 @@ def get_project_commits(project_id: int):
 
         page += 1
     return commits
-
-def sync_project_commits(project_id: int):
-    commits = get_project_commits(project_id)
-
-    repo_internal_id = get_internal_repo_id(project_id)
-
-    if not repo_internal_id:
-        raise Exception("Repo not found in DB. Run /syncProjects first.")
-
-    with DbCursor() as cursor:
-        for c in commits:
-            sha = c["id"]
-
-            detail_resp = requests.get(
-                f"{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits/{sha}",
-                headers=_headers(),
-                timeout=10,
-            )
-            detail_resp.raise_for_status()
-            detail = detail_resp.json()
-
-            cursor.execute(
-                """
-                INSERT INTO commits (
-                    sha, repo_id, author_name, author_email,
-                    message, additions, deletions,
-                    branch, committed_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    author_name = VALUES(author_name),
-                    author_email = VALUES(author_email),
-                    message = VALUES(message),
-                    additions = VALUES(additions),
-                    deletions = VALUES(deletions),
-                    branch = VALUES(branch),
-                    committed_at = VALUES(committed_at)
-                """,
-                (
-                    sha,
-                    repo_internal_id,
-                    c.get("author_name"),
-                    c.get("author_email"),
-                    c.get("title"),
-                    detail.get("stats", {}).get("additions", 0),
-                    detail.get("stats", {}).get("deletions", 0),
-                    "main", #need to replace this with actual branch later
-                    c.get("committed_date"),
-                ),
-            )

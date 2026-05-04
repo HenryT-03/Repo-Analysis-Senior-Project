@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { fetchMe } from "./api.ts";
 import LoginPage from "./pages/Loginpage";
-import DashboardPage from "./pages/Dashboardpage";
-import RepoPage from "./pages/Repopage";
 import GroupHub from './GroupHub';
 import TAOverallViewPage from './TAOverallPage';
+import SiteConfigPage from "./SiteConfigPage.tsx";
+import { ConfigProvider } from "./ConfigContext.tsx";
 
 export type User = {
   id: number;
@@ -45,49 +45,52 @@ export default function App() {
   if (loading) return <p style={{ padding: 32 }}>Loading...</p>;
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            user
-              ? <Navigate to="/dashboard" replace />
-              : <LoginPage />
-          }
-        />
-        {/* <Route
-          path="/groups"
-          element={
-            user
-              ? <GroupHub />
-              : <Navigate to="/" replace />
-          }
-        /> */}
-        <Route
-          path="/groups"
-          element={
-            user
-              ? <GroupHub />
-              : <Navigate to="/" replace />
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            user
-              ? <GroupHub />
-              : <Navigate to="/" replace />
-          }
-        />
-        <Route
-          path="/group/:repoId"
-          element={
-            user
-              ? <TAOverallViewPage />
-              : <Navigate to="/" replace />
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+      <ConfigProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                user
+                  ? <Navigate to="/dashboard" replace />
+                  : <LoginPage />
+              }
+            />
+            {/* <Route
+              path="/groups"
+              element={
+                user
+                  ? <GroupHub />
+                  : <Navigate to="/" replace />
+              }
+            /> */}
+            <Route
+              path="/groups"
+              element={
+                user
+                  ? <GroupHub />
+                  : <Navigate to="/" replace />
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                user
+                  ? <GroupHub />
+                  : <Navigate to="/" replace />
+              }
+            />
+            <Route
+              path="/group/:repoId"
+              element={
+                user
+                  ? <TAOverallViewPage />
+                  : <Navigate to="/" replace />
+              }
+            />
+            <Route path="/config" element={<SiteConfigPage />} />
+          </Routes>
+        </BrowserRouter>
+      </ConfigProvider>
   );
 }

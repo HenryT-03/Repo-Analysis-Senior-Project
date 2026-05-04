@@ -2,7 +2,7 @@ import requests
 from flask import Blueprint, jsonify, request, g
 from auth.middleware import require_auth, require_role
 from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects, sync_project_commits, get_internal_repo_id, sync_all_commits, get_all_repos
-from gitrepo.client import get_project, get_group_projects, get_contributors, get_project_commits
+from gitrepo.client import get_project, get_group_projects, get_contributors, get_project_commits, get_config, set_config
 from db import DbCursor
 
 gitrepo_bp = Blueprint("gitrepo", __name__, url_prefix="/gitrepo")
@@ -223,3 +223,17 @@ def fetch_projects():
         "data": result
     })
 
+@gitrepo_bp.route("/config", methods=["GET"])
+def get_config_route():
+    return jsonify(get_config())
+
+@gitrepo_bp.route("/config", methods=["POST"])
+def set_config_route():
+    updates = request.get_json()
+    if not updates:
+        return jsonify({"error": "No data provided"}), 400
+    try:
+        updated = set_config(updates)
+        return jsonify(updated)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
