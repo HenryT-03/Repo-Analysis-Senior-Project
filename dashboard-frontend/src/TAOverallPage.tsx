@@ -290,6 +290,7 @@ useEffect(() => {
         start,
         end,
       ));
+      setCommitData(buildCommitChartData(commits));
     } catch (err) {
       console.error(err);
       setError("Failed to load commit data");
