@@ -211,7 +211,6 @@ const filteredRows = useMemo(() => {
     <div style={styles.root}>
       <Sidebar  />
       <div style={styles.main}>
-        <TopBar />
         <div style={styles.content}>
           <div style={styles.container}>
             <div style={styles.header}>
@@ -337,90 +336,6 @@ const filteredRows = useMemo(() => {
               <CommitGraph data={commitData} loading={loading} />
             )}
           </div>
-
-            <div style={styles.gridContainer}>
-              <section style={styles.section}>
-                <div style={styles.sectionHeader}>
-                  <div>
-                    <h2 style={styles.sectionTitle}>Unknown Authors</h2>
-                    <p style={styles.sectionSubtitle}>Commits that did not map to a known student account</p>
-                  </div>
-                  <div style={styles.rowCount}>{unknownAuthors.length} rows</div>
-                </div>
-                <div style={styles.tableWrapper}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr style={styles.headerRow}>
-                        {['Team', 'SHA', 'Author', 'Email', 'Message', 'Date'].map((h) => (
-                          <th key={h} style={styles.headerCell}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {unknownAuthors.length > 0 ? (
-                        unknownAuthors.map((r, idx) => (
-                          <tr key={idx} style={idx % 2 ? styles.rowEven : styles.rowOdd}>
-                            <td style={styles.cell}>{r.team || "N/A"}</td>
-                            <td style={styles.cell}>{r.sha || "N/A"}</td>
-                            <td style={styles.cell}>{r.author || "N/A"}</td>
-                            <td style={styles.cell}>{r.email || "N/A"}</td>
-                            <td style={styles.cell}>{r.message || "N/A"}</td>
-                            <td style={styles.cell}>{r.date || "N/A"}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr style={styles.rowOdd}>
-                          <td style={styles.cell}>N/A</td>
-                          <td style={styles.cell}>N/A</td>
-                          <td style={styles.cell}>N/A</td>
-                          <td style={styles.cell}>N/A</td>
-                          <td style={styles.cell}>N/A</td>
-                          <td style={styles.cell}>N/A</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              <section style={styles.section}>
-                <div style={styles.sectionHeader}>
-                  <div>
-                    <h2 style={styles.sectionTitle}>Kotlin Files in Repo</h2>
-                    <p style={styles.sectionSubtitle}>Flagged files found in frontend/backend repos</p>
-                  </div>
-                  <div style={styles.rowCount}>{kotlinFiles.length} rows</div>
-                </div>
-                <div style={styles.tableWrapper}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr style={styles.headerRow}>
-                        {['Team', 'File Path'].map((h) => (
-                          <th key={h} style={styles.headerCell}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                  <tbody>
-                    {kotlinFiles.length > 0 ? (
-                      kotlinFiles.map((r, idx) => (
-                        <tr key={idx} style={idx % 2 ? styles.rowEven : styles.rowOdd}>
-                          <td style={styles.cell}>{r.team || "N/A"}</td>
-                          <td style={{ ...styles.cell, fontFamily: 'monospace', fontSize: '12px' }}>
-                            {r.filePath || "N/A"}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr style={styles.rowOdd}>
-                        <td style={styles.cell}>N/A</td>
-                        <td style={{ ...styles.cell, fontFamily: 'monospace', fontSize: '12px' }}>N/A</td>
-                      </tr>
-                    )}
-                  </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
           </div>
         </div>
       </div>

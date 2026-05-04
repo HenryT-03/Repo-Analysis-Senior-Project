@@ -69,7 +69,6 @@ const Dashboard: React.FC = () => {
     <div style={styles.root}>
       <Sidebar />
       <div style={styles.main}>
-        <TopBar />
         <div style={styles.content}>
           <div style={styles.breadcrumb}>
             <span

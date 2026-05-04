@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 const CARDINAL = "#822433";
 
-const NAV_ITEMS = ["Dashboard", "Calendar", "Inbox", "Help", "Account"];
+const NAV_ITEMS = ["Dashboard", "Site Config"];
 
 const HubSidebar: React.FC = () => {
   const [active, setActive] = useState("Dashboard");
@@ -21,8 +21,7 @@ const HubSidebar: React.FC = () => {
       <div style={styles.avatarSection}>
         <div style={styles.avatar} />
         <div style={styles.userInfo}>
-          <div style={styles.userName}>Instructor</div>
-          <div style={styles.userClass}>[class]</div>
+          <div style={styles.userName}>Repo Analysis Tool</div>
         </div>
       </div>
       <nav style={styles.nav}>

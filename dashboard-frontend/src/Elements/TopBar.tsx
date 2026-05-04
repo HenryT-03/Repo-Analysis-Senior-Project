@@ -4,17 +4,6 @@ import type { DateRange } from "./Calendar";
 
 const CARDINAL = "#822433";
 
-const TIME_OPTIONS = [
-  "Last 5 Minutes",
-  "Last 15 Minutes",
-  "Last 30 Minutes",
-  "Last 1 Hour",
-  "Last 6 Hours",
-  "Last 24 Hours",
-  "Last 7 Days",
-  "Last 30 Days",
-];
-
 const CalendarIcon: React.FC = () => (
   <svg
     width="16"
@@ -92,40 +81,6 @@ const TopBar: React.FC = () => {
         )}
       </div>
       <div style={styles.timeSelector} ref={dropdownRef}>
-        <button
-          style={{ ...styles.button, ...styles.timeBtn }}
-          onClick={() => { setDropdownOpen((o) => !o); setCalendarOpen(false); }}
-        >
-          {selectedTime}
-          <span style={styles.btnArrow}>{dropdownOpen ? "▲" : "▼"}</span>
-        </button>
-        {dropdownOpen && (
-          <div style={styles.dropdown}>
-            {TIME_OPTIONS.map((opt) => (
-              <div
-                key={opt}
-                style={{
-                  ...styles.dropdownItem,
-                  ...(opt === selectedTime ? styles.dropdownItemActive : {}),
-                }}
-                onMouseEnter={(e) => {
-                  if (opt !== selectedTime)
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = "#f5f5f5";
-                }}
-                onMouseLeave={(e) => {
-                  if (opt !== selectedTime)
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = "white";
-                }}
-                onClick={() => {
-                  setSelectedTime(opt);
-                  setDropdownOpen(false);
-                }}
-              >
-                {opt}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

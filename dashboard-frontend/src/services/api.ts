@@ -38,6 +38,10 @@ const api = {
   syncRepo: async (repoId: string) => {
     return fetchWithAuth(`${API_BASE}/gitrepo/projects/${repoId}/syncCommits`, { method: 'POST' });
   },
+  syncAllRepos: async () => 
+    {
+      return fetchWithAuth(`${API_BASE}/gitrepo/syncProjects`, { method: 'POST'})
+    },
 
   // Auth routes (no auth header needed)
   signup: async (email: string, password: string, name: string) => {

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HubSidebar from "./Elements/HubSidebar";
-import TopBar from "./Elements/TopBar";
+import { RefreshCw } from 'lucide-react';
 import SquareGrid from "./Elements/GroupviewSquareGrid";
 import LoadingSpinner from "./Elements/LoadingSpinner";
 import { fetchRepos } from "./api";
+import api from "./services/api";
+
 
 type Repo = {
   id: number;
@@ -25,6 +27,20 @@ const GroupHub: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
+const handleSync = async () => {
+  setSyncing(true);
+  try {
+    await api.syncAllRepos();
+    const res = await fetchRepos();
+    setGroups(res.data);
+  } catch {
+    setError("Failed to sync repos");
+  } finally {
+    setSyncing(false);
+  }
+};
 
   useEffect(() => {
     setLoading(true);
@@ -51,18 +67,28 @@ const GroupHub: React.FC = () => {
     <div style={styles.root}>
       <HubSidebar />
       <div style={styles.main}>
-        <TopBar />
         <div style={styles.content}>
 
-          {/* Search */}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: 16 }}>
           <input
             type="text"
             placeholder="Search repos..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={styles.search}
+            style={{ ...styles.search, marginBottom: 0, flex: 1 }}
           />
-
+          <button
+            style={{
+              ...styles.button,
+              opacity: syncing ? 0.6 : 1,
+              pointerEvents: syncing ? "none" : "auto",
+              flexShrink: 0,
+            }}
+            onClick={handleSync}
+          >
+            <RefreshCw style={styles.icon} /> {syncing ? "Syncing..." : "Sync Repos"}
+          </button>
+        </div>
         {error && <p style={styles.error}>{error}</p>}
 
         {loading ? (
@@ -113,6 +139,21 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#c62828",
     marginBottom: 12,
   },
+    button: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    height: "36px",
+    padding: "0 12px",
+    backgroundColor: "#822433",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    fontFamily: "monospace",
+    fontSize: "13px",
+    cursor: "pointer"
+  },
+
 };
 
 export default GroupHub;
