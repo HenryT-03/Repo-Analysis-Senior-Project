@@ -370,7 +370,7 @@ const filteredRows = useMemo(() => {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.headerRow}>
-                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Commit Rating', 'Lines +/-', 'Merged to Main?', 'Issues Created', 'Issues Updated', 'Branches', 'Is Kotlin?', 'FE/BE Consist', 'Auto-Notes'].map((h) => (
+                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Commit Rating', 'Lines +/-', 'Merged to Main?', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
                       <th key={h} style={styles.headerCell}>{h}</th>
                     ))}
                   </tr>
@@ -391,9 +391,6 @@ const filteredRows = useMemo(() => {
                       <td style={{ ...styles.cell, backgroundColor: yesNoBg(row.mergedToMain) }}>{row.mergedToMain}</td>
                       <td style={styles.cell}>{row.issuesCreated}</td>
                       <td style={styles.cell}>{row.issuesUpdated}</td>
-                      <td style={{ ...styles.cell, backgroundColor: yesNoBg(row.branches) }}>{row.branches}</td>
-                      <td style={{ ...styles.cell, backgroundColor: yesNoBg(row.isKotlin) }}>{row.isKotlin}</td>
-                      <td style={{ ...styles.cell, backgroundColor: yesNoBg(row.feBeConsist) }}>{row.feBeConsist}</td>
                       <td style={styles.cell}>{row.autoNotes || ''}</td>
                     </tr>
                   ))}
