@@ -15,7 +15,7 @@ type TeamRow = {
   meaningful: number;
   merge: number;
   trivial: number;
-  commitRating: 'Excellent' | 'Good' | 'Poor';
+  commitRating: 'Outstanding' | 'Excellent' | 'Good' | 'Poor';
   linesPlusMinus: string;
   mergedToMain: 'YES' | 'NO' | 'N/A';
   issuesCreated: number;
@@ -84,12 +84,40 @@ const unknownAuthors: UnknownAuthor[] = [];
 const kotlinFiles: KotlinFile[] = [];
 
 function ratingBg(rating: TeamRow['commitRating']) {
+  if (rating === 'Outstanding') return '#bbdefb';
   if (rating === 'Excellent') return '#c9f2cc';
   if (rating === 'Good') return '#fff2b4';
   return '#f5c1c1';
 }
+function commitCountBg(total: number, expected: number): string {
+  if (total === 0) return '#f5c1c1';           // red
+  if (total >= expected * 2) return '#bbdefb'; // blue
+  if (total >= expected) return '#c9f2cc';     // green
+  return '#fff2b4';                            // yellow
+}
 
-function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: string): TeamRow[] {
+function mergeBg(merges: number, expected: number): string {
+  if (merges === 0) return '#f5c1c1';           // red
+  if (merges >= expected * 2) return '#bbdefb'; // blue
+  if (merges >= expected) return '#c9f2cc';     // green
+  return '#fff2b4';                             // yellow
+}
+
+function buildRowsFromCommits(
+  commits: any[],
+  contributors: any[],
+  teamLabel: string,
+  expectedCommitsWeekly: number,
+  expectedMergesDemo: number,
+  demoStart: string,
+  demoEnd: string,
+): TeamRow[] {
+  // Calculate number of weeks in the demo period
+  const start = new Date(demoStart);
+  const end = new Date(demoEnd);
+  const weeks = Math.max(1, Math.round((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000)));
+  const expectedCommitsTotal = expectedCommitsWeekly * weeks;
+
   const authorMap: Record<string, {
     name: string;
     email: string;
@@ -119,19 +147,10 @@ function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: st
     authorMap[key].mergeCommits += c.is_merge ? 1 : 0;
     authorMap[key].additions += c.additions ?? 0;
     authorMap[key].deletions += c.deletions ?? 0;
-    // Take the max seen — since issue counts are per-author totals
-    // attached to every commit, not per-commit
-    authorMap[key].issuesCreated = Math.max(
-      authorMap[key].issuesCreated,
-      c.issues_created ?? 0
-    );
-    authorMap[key].issuesUpdated = Math.max(
-      authorMap[key].issuesUpdated,
-      c.issues_updated ?? 0
-    );
+    authorMap[key].issuesCreated = Math.max(authorMap[key].issuesCreated, c.issues_created ?? 0);
+    authorMap[key].issuesUpdated = Math.max(authorMap[key].issuesUpdated, c.issues_updated ?? 0);
   });
 
-  // Add contributors with 0 commits in range
   contributors.forEach((c) => {
     const key = c.email || c.name;
     if (!authorMap[key]) {
@@ -149,8 +168,36 @@ function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: st
   });
 
   return Object.values(authorMap).map((c) => {
+    
+    
     const total = c.totalCommits;
     const meaningful = total - c.mergeCommits;
+
+    const commitRating = 'Outstanding'
+
+    const notes: string[] = [];
+    if (total === 0) {
+      notes.push("No commits in this period");
+    } else {
+      if (total >= expectedCommitsTotal * 2) {
+        notes.push(`Commits: ${total} (≥2x expected of ${expectedCommitsTotal})`);
+      } else if (total >= expectedCommitsTotal) {
+        notes.push(`Commits: ${total} (meets expected of ${expectedCommitsTotal})`);
+      } else {
+        notes.push(`Commits: ${total} (below expected of ${expectedCommitsTotal})`);
+      }
+
+      if (c.mergeCommits === 0) {
+        notes.push(`No merge commits (expected ${expectedMergesDemo})`);
+      } else if (c.mergeCommits >= expectedMergesDemo * 2) {
+        notes.push(`Merges: ${c.mergeCommits} (≥2x expected of ${expectedMergesDemo})`);
+      } else if (c.mergeCommits >= expectedMergesDemo) {
+        notes.push(`Merges: ${c.mergeCommits} (meets expected of ${expectedMergesDemo})`);
+      } else {
+        notes.push(`Merges: ${c.mergeCommits} (below expected of ${expectedMergesDemo})`);
+      }
+    }
+
     return {
       team: teamLabel,
       student: c.name,
@@ -160,7 +207,7 @@ function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: st
       meaningful,
       merge: c.mergeCommits,
       trivial: 0,
-      commitRating: total >= 5 ? "Excellent" : total >= 2 ? "Good" : "Poor",
+      commitRating,
       linesPlusMinus: `+${c.additions}/-${c.deletions}`,
       mergedToMain: "N/A" as const,
       issuesCreated: c.issuesCreated,
@@ -168,15 +215,9 @@ function buildRowsFromCommits(commits: any[], contributors: any[], teamLabel: st
       branches: "N/A" as const,
       isKotlin: "NO" as const,
       feBeConsist: "NO" as const,
-      autoNotes: total === 0 ? "No commits in this period" : "",
+      autoNotes: notes.join(", "),
     };
   });
-}
-
-function yesNoBg(value: string) {
-  if (value === 'YES') return '#d9f3d9';
-  if (value === 'NO') return '#f7d6d6';
-  return '#f8f0c9';
 }
 
 export default function TAOverallViewPage() {
@@ -201,6 +242,8 @@ export default function TAOverallViewPage() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<TeamRow[]>([]);
   const [commitData, setCommitData] = useState<any[]>([]);
+  const expectedCommits = config?.ExpectedCommitsWeekly ?? 1;
+  const expectedMerges = config?.ExpectedMergesDemo ?? 1;
   const { id } = useParams();
 
   // Fetch repos on component mount
@@ -238,8 +281,15 @@ useEffect(() => {
       const commits = await api.getRepoCommits(selectedRepoId, { start, end });
       const contributorsRes = await api.getRepoContributors(selectedRepoId);
 
-      setRows(buildRowsFromCommits(commits, contributorsRes.contributors, selectedRepoId));
-      setCommitData(buildCommitChartData(commits));
+      setRows(buildRowsFromCommits(
+        commits,
+        contributorsRes.contributors,
+        selectedRepoId,
+        expectedCommits,
+        expectedMerges,
+        start,
+        end,
+      ));
     } catch (err) {
       console.error(err);
       setError("Failed to load commit data");
@@ -309,7 +359,15 @@ const filteredRows = useMemo(() => {
 
       setCommitData(buildCommitChartData(commits));
 
-      setRows(buildRowsFromCommits(commits, contributorsRes.contributors, selectedRepoId));
+    setRows(buildRowsFromCommits(
+      commits,
+      contributorsRes.contributors,
+      selectedRepoId,
+      expectedCommits,
+      expectedMerges,
+      start,
+      end,
+    ));
     } catch (err) {
       console.error("Sync failed:", err);
       setError("Failed to sync repo");
@@ -380,7 +438,7 @@ const filteredRows = useMemo(() => {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.headerRow}>
-                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Commit Rating', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
+                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
                       <th key={h} style={styles.headerCell}>{h}</th>
                     ))}
                   </tr>
@@ -392,11 +450,14 @@ const filteredRows = useMemo(() => {
                       <td style={styles.cell}>{row.student}</td>
                       <td style={styles.cell}>{row.username}</td>
                       <td style={styles.cell}>{row.role}</td>
-                      <td style={styles.cell}>{row.totalCommits}</td>
+                      <td style={{ ...styles.cell, backgroundColor: commitCountBg(row.totalCommits, (config?.ExpectedCommitsWeekly ?? 1)) }}>
+                        {row.totalCommits}
+                      </td>
                       <td style={styles.cell}>{row.meaningful}</td>
-                      <td style={{ ...styles.cell, backgroundColor: yesNoBg(row.merge > 1 ? "YES" : "NO") }}>{row.merge}</td>
-                      <td style={styles.cell}>{row.trivial}</td>
-                      <td style={{ ...styles.cell, backgroundColor: ratingBg(row.commitRating) }}>{row.commitRating}</td>
+                      <td style={{ ...styles.cell, backgroundColor: mergeBg(row.merge, config?.ExpectedMergesDemo ?? 1) }}>
+                        {row.merge}
+                      </td>                   
+                     <td style={styles.cell}>{row.trivial}</td>
                       <td style={styles.cell}>{row.linesPlusMinus}</td>
                       <td style={styles.cell}>{row.issuesCreated}</td>
                       <td style={styles.cell}>{row.issuesUpdated}</td>
