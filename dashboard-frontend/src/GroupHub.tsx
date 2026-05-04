@@ -1,115 +1,84 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import HubSidebar from "./Elements/HubSidebar";
 import { RefreshCw } from 'lucide-react';
 import SquareGrid from "./Elements/GroupviewSquareGrid";
 import LoadingSpinner from "./Elements/LoadingSpinner";
-import { fetchRepos } from "./api";
 import api from "./services/api";
-
-
-type Repo = {
-  id: number;
-  name: string;
-  namespace: string;
-};
-
-type GroupOverview = {
-  id: number;
-  name: string;
-  totalCommits: number;
-  students: { name: string; quality: "excellent" | "good" | "poor" }[];
-};
+import { useData } from "./DataProvider";
 
 const GroupHub: React.FC = () => {
-  const [groups, setGroups] = useState<GroupOverview[]>([]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const { repos, usersByRepo, loading, refresh } = useData();
 
-const handleSync = async () => {
-  setSyncing(true);
-  try {
-    await api.syncAllRepos();
-    const res = await fetchRepos();
-    setGroups(res.data);
-  } catch {
-    setError("Failed to sync repos");
-  } finally {
-    setSyncing(false);
-  }
-};
+  const handleSync = async () => {
+    setSyncing(true);
+    setError(null);
+    try {
+      await api.syncAllRepos();
+      await refresh();
+    } catch {
+      setError("Failed to sync repos");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
-  useEffect(() => {
-    setLoading(true);
-    fetchRepos()
-    .then((res) => {
-        setGroups(res.data);
-      })
-    .catch(() => {
-        setError("Failed to load projects");
-    })
-    .finally(() => {
-      setLoading(false);
-    });      
-  }, []);
-    
-  const transformed = groups.map((g) => ({
-    id: g.id,
-    name: g.name,
-    totalCommits: g.totalCommits,
-    students: g.students
+  const getQuality = (commits: number): "excellent" | "good" | "poor" => {
+    if (commits >= 20) return "excellent";
+    if (commits >= 5) return "good";
+    return "poor";
+  };
+
+  const groups = repos.map((r) => ({
+    id: r.id,
+    name: r.name,
+    totalCommits: r.total_commits,
+    students: (usersByRepo[r.id] ?? []).map((u) => ({
+      name: u.name,
+      quality: getQuality(u.commits),
+    })),
   }));
-  
-  const filtered = transformed.filter((g) => {
-  const q = search.trim().toLowerCase();
-  if (!q) return true;
-  
-  const nameMatch = g.name.toLowerCase().includes(q);
-  const studentMatch = g.students?.some((s) =>
-    s.name.toLowerCase().includes(q)
-  );
-  
-  return nameMatch || studentMatch;
-});
+
+  const filtered = groups.filter((g) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      g.name.toLowerCase().includes(q) ||
+      g.students.some((s) => s.name.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div style={styles.root}>
       <HubSidebar />
       <div style={styles.main}>
         <div style={styles.content}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: 16 }}>
+            <input
+              type="text"
+              placeholder="Search repos..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ ...styles.search, marginBottom: 0, flex: 1 }}
+            />
+            <button
+              style={{
+                ...styles.button,
+                opacity: syncing ? 0.6 : 1,
+                pointerEvents: syncing ? "none" : "auto",
+                flexShrink: 0,
+              }}
+              onClick={handleSync}
+            >
+              <RefreshCw style={styles.icon} /> {syncing ? "Syncing..." : "Sync Repos"}
+            </button>
+          </div>
 
-        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: 16 }}>
-          <input
-            type="text"
-            placeholder="Search repos..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ ...styles.search, marginBottom: 0, flex: 1 }}
-          />
-          <button
-            style={{
-              ...styles.button,
-              opacity: syncing ? 0.6 : 1,
-              pointerEvents: syncing ? "none" : "auto",
-              flexShrink: 0,
-            }}
-            onClick={handleSync}
-          >
-            <RefreshCw style={styles.icon} /> {syncing ? "Syncing..." : "Sync Repos"}
-          </button>
-        </div>
-        {error && <p style={styles.error}>{error}</p>}
+          {error && <p style={styles.error}>{error}</p>}
 
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
-        <SquareGrid
-          groups={filtered.map((g) => ({ ...g }))}
-        />
-        )}
+          {loading ? <LoadingSpinner /> : <SquareGrid groups={filtered} />}
         </div>
       </div>
     </div>

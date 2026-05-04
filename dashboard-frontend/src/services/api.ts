@@ -16,6 +16,12 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 }
 
 const api = {
+  
+  //get all
+  getAllData: async () => {
+    return fetchWithAuth(`${API_BASE}/gitrepo/debug/all`);
+  },
+
   // Repos
   getRepos: async () => {
     return fetchWithAuth(`${API_BASE}/gitrepo/repos`);

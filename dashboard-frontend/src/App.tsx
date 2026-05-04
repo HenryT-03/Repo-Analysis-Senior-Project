@@ -6,6 +6,7 @@ import GroupHub from './GroupHub';
 import TAOverallViewPage from './TAOverallPage';
 import SiteConfigPage from "./SiteConfigPage.tsx";
 import { ConfigProvider } from "./ConfigContext.tsx";
+import { DataProvider } from "./DataProvider.tsx";
 
 export type User = {
   id: number;
@@ -45,52 +46,54 @@ export default function App() {
   if (loading) return <p style={{ padding: 32 }}>Loading...</p>;
 
   return (
-      <ConfigProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                user
-                  ? <Navigate to="/dashboard" replace />
-                  : <LoginPage />
-              }
-            />
-            {/* <Route
-              path="/groups"
-              element={
-                user
-                  ? <GroupHub />
-                  : <Navigate to="/" replace />
-              }
-            /> */}
-            <Route
-              path="/groups"
-              element={
-                user
-                  ? <GroupHub />
-                  : <Navigate to="/" replace />
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                user
-                  ? <GroupHub />
-                  : <Navigate to="/" replace />
-              }
-            />
-            <Route
-              path="/group/:repoId"
-              element={
-                user
-                  ? <TAOverallViewPage />
-                  : <Navigate to="/" replace />
-              }
-            />
-            <Route path="/config" element={<SiteConfigPage />} />
-          </Routes>
-        </BrowserRouter>
-      </ConfigProvider>
+    <DataProvider>
+        <ConfigProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  user
+                    ? <Navigate to="/dashboard" replace />
+                    : <LoginPage />
+                }
+              />
+              {/* <Route
+                path="/groups"
+                element={
+                  user
+                    ? <GroupHub />
+                    : <Navigate to="/" replace />
+                }
+              /> */}
+              <Route
+                path="/groups"
+                element={
+                  user
+                    ? <GroupHub />
+                    : <Navigate to="/" replace />
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  user
+                    ? <GroupHub />
+                    : <Navigate to="/" replace />
+                }
+              />
+              <Route
+                path="/group/:repoId"
+                element={
+                  user
+                    ? <TAOverallViewPage />
+                    : <Navigate to="/" replace />
+                }
+              />
+              <Route path="/config" element={<SiteConfigPage />} />
+            </Routes>
+          </BrowserRouter>
+        </ConfigProvider>
+      </DataProvider>
   );
 }

@@ -5,6 +5,7 @@ import CommitGraph from "./Elements/CommitGraph";
 import api from "./services/api";
 import { useParams } from "react-router-dom";
 import { ConfigProvider, useConfig } from './ConfigContext';
+import { useData } from './DataProvider';
 
 type TeamRow = {
   team: string;
@@ -226,7 +227,8 @@ export default function TAOverallViewPage() {
 
   const [search, setSearch] = useState('');
   const [timeRange, setTimeRange] = useState("Demo 1");
-  
+  const { repos, usersByRepo, commitsByEmail, loading, refresh } = useData();
+
   const demoRanges: Record<string, { start: string; end: string }> = {
     "Demo 1": { start: config?.Demo1Start ?? "", end: config?.Demo1End ?? "" },
     "Demo 2": { start: config?.Demo2Start ?? "", end: config?.Demo2End ?? "" },
@@ -235,9 +237,7 @@ export default function TAOverallViewPage() {
   };
   const options = Object.keys(demoRanges);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [repos, setRepos] = useState<any[]>([]);
   const { repoId: selectedRepoId } = useParams();
-  const [loading, setLoading] = useState(false);
   const [attemptingSync, setAttemptingSync] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<TeamRow[]>([]);
@@ -246,19 +246,6 @@ export default function TAOverallViewPage() {
   const expectedMerges = config?.ExpectedMergesDemo ?? 1;
   const { id } = useParams();
 
-  // Fetch repos on component mount
-  useEffect(() => {
-    const fetchRepos = async () => {
-      try {
-        const data = await api.getRepos();
-        setRepos(data);
-      } catch (err) {
-        console.warn('Failed to fetch repos, using mock data:', err);
-        setRows(summaryRows);
-      }
-    };
-    fetchRepos();
-  }, []);
 
 // Initiating demo selection
 useEffect(() => {
@@ -267,42 +254,36 @@ useEffect(() => {
   return () => document.removeEventListener("click", handleClickOutside);
 }, [dropdownOpen]);
 
-// Refresh data when either selectedRepoId or TimeRange changes
 useEffect(() => {
-  if (!selectedRepoId) return;
+  if (!selectedRepoId || loading) return;
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
+  const { start, end } = demoRanges[timeRange];
+  const contributors = usersByRepo[Number(selectedRepoId)] ?? [];
 
-    const { start, end } = demoRanges[timeRange];
+  // Only grab commits for emails that belong to this repo's contributors
+  const repoEmails = new Set(contributors.map((c) => c.email).filter(Boolean));
 
-    try {
-      const commits = await api.getRepoCommits(selectedRepoId, { start, end });
-      const contributorsRes = await api.getRepoContributors(selectedRepoId);
+  const repoCommits = [...repoEmails]
+    .flatMap((email) => commitsByEmail[email] ?? [])
+    .filter((c) => {
+      const date = new Date(c.committed_at);
+      return (
+        (!start || date >= new Date(start)) &&
+        (!end || date <= new Date(end))
+      );
+    });
 
-      setRows(buildRowsFromCommits(
-        commits,
-        contributorsRes.contributors,
-        selectedRepoId,
-        expectedCommits,
-        expectedMerges,
-        start,
-        end,
-      ));
-      setCommitData(buildCommitChartData(commits));
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load commit data");
-      setRows(summaryRows);
-      setCommitData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchData();
-}, [selectedRepoId, timeRange]);
+  setRows(buildRowsFromCommits(
+    repoCommits,
+    contributors,
+    selectedRepoId,
+    expectedCommits,
+    expectedMerges,
+    start,
+    end,
+  ));
+  setCommitData(buildCommitChartData(repoCommits));
+}, [selectedRepoId, timeRange, commitsByEmail, usersByRepo]);
 
 const filteredRows = useMemo(() => {
   const q = search.trim().toLowerCase();
@@ -348,34 +329,18 @@ const filteredRows = useMemo(() => {
                   opacity: loading ? 0.6 : 1,
                   pointerEvents: loading ? 'none' : 'auto'
                 }}
-  onClick={async () => {
-    if (!selectedRepoId) return;
-    setAttemptingSync(true);
-    try {
-      await api.syncRepo(selectedRepoId);
-
-      const { start, end } = demoRanges[timeRange];
-      const commits = await api.getRepoCommits(selectedRepoId, { start, end });
-      const contributorsRes = await api.getRepoContributors(selectedRepoId);
-
-      setCommitData(buildCommitChartData(commits));
-
-    setRows(buildRowsFromCommits(
-      commits,
-      contributorsRes.contributors,
-      selectedRepoId,
-      expectedCommits,
-      expectedMerges,
-      start,
-      end,
-    ));
-    } catch (err) {
-      console.error("Sync failed:", err);
-      setError("Failed to sync repo");
-    } finally {
-      setAttemptingSync(false);
-    }
-  }}
+              onClick={async () => {
+                if (!selectedRepoId) return;
+                setAttemptingSync(true);
+                try {
+                  await api.syncRepo(selectedRepoId);
+                  await refresh(); 
+                } catch (err) {
+                  setError("Failed to sync repo");
+                } finally {
+                  setAttemptingSync(false);
+                }
+              }}
               >
                 <RefreshCw style={styles.icon} /> {attemptingSync ? 'Syncing...' : 'Refresh'}
               </button>
