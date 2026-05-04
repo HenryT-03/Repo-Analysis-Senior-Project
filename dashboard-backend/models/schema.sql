@@ -26,6 +26,9 @@ CREATE TABLE contributors (
     repo_id INT,
     gitlab_user_id INT,
     name VARCHAR(255),
+    email VARCHAR(255),
+    additions INT DEFAULT 0,
+    deletions INT DEFAULT 0;
     commits INT DEFAULT 0
 );
 

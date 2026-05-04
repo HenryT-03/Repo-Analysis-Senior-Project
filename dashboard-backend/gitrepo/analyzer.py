@@ -170,6 +170,29 @@ def get_all_student_stats(repo_db_id: int) -> list:
 
 
 #Jacob Methods
+def sync_contributors_of_project(project_id):
+    contributors = get_contributors(project_id)
+
+    with DbCursor() as cursor:
+        cursor.execute("DELETE FROM contributors WHERE repo_id = %s", (project_id,))
+
+        for c in contributors:
+            cursor.execute(
+                """
+                INSERT INTO contributors (repo_id, gitlab_user_id, name, email, commits, additions, deletions)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    project_id,
+                    c.get("id") or c.get("user_id") or None,
+                    c.get("name") or c.get("username") or "Unknown",
+                    c.get("email") or None,
+                    c.get("commits", 0),
+                    c.get("additions", 0),
+                    c.get("deletions", 0),
+                ),
+            )
+
 def upsert_project_with_stats(project, contributors):
     total_commits = sum(c.get("commits", 0) for c in contributors)
 
@@ -184,33 +207,12 @@ def upsert_project_with_stats(project, contributors):
             """,
             (project["id"], project["name"], total_commits),
         )
-        cursor.execute(
-            "DELETE FROM contributors WHERE repo_id = %s",
-            (project["id"],),
-        )
-
-        for c in contributors:
-            gitlab_user_id = c.get("id") or c.get("user_id") or None
-            name = c.get("name") or c.get("username") or "Unknown"
-
-            cursor.execute(
-                """
-                INSERT INTO contributors (repo_id, gitlab_user_id, name, commits)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (
-                    project["id"],
-                    gitlab_user_id,
-                    name,
-                    c.get("commits", 0),
-                ),
-            )
+    sync_contributors_of_project(project["id"])
 
 def sync_all_projects():
     projects = get_group_projects()
     for p in projects:
-        project_id = p["id"]
-        contributors = get_contributors(project_id)
+        contributors = get_contributors(p["id"])
         upsert_project_with_stats(p, contributors)
 
 def sync_project_commits(project_id: int):
@@ -307,7 +309,8 @@ def get_all_repos():
         cursor.execute("SELECT id, gitlab_id FROM repos")
         return cursor.fetchall()
 
-def sync_all_commitsIssues():
+def sync_all_data():
+    sync_all_projects()
     repos = get_all_repos()
     results = []
     errors = []

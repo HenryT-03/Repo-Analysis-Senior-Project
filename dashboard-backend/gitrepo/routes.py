@@ -1,7 +1,7 @@
 import requests
 from flask import Blueprint, jsonify, request, g
 from auth.middleware import require_auth, require_role
-from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects, sync_project_commits, get_internal_repo_id, sync_all_commitsIssues, get_all_repos, sync_project_issues
+from gitrepo.analyzer import sync_repo, sync_commits, get_student_stats, get_all_student_stats, sync_all_projects, sync_project_commits, get_internal_repo_id, sync_all_data, get_all_repos, sync_project_issues
 from gitrepo.client import get_project, get_group_projects, get_contributors, get_project_commits, get_config, set_config
 from db import DbCursor
 
@@ -118,13 +118,20 @@ def list_commits(repo_db_id):
 @gitrepo_bp.route("/projects/<int:project_id>/contributors", methods=["GET"])
 def fetch_contributors(project_id):
     """
-    Get per-project contributor stats.
+    Get per-project contributor stats from the database.
     """
-    contributors = get_contributors(project_id)
+    with DbCursor() as cursor:
+        cursor.execute(
+            """
+            SELECT name, email, commits, additions, deletions
+            FROM contributors
+            WHERE repo_id = %s
+            """,
+            (project_id,),
+        )
+        contributors = cursor.fetchall()
 
-    return jsonify({
-        "contributors": contributors
-    })
+    return jsonify({"contributors": contributors})
 
 @gitrepo_bp.route("/projects/<int:project_id>/commits", methods=["GET"])
 def get_commits(project_id):
@@ -205,12 +212,12 @@ def sync_projects():
     sync_all_projects()
     return jsonify({"message": "Sync completed"}), 200
 
-@gitrepo_bp.route("/projects/syncAllCommits", methods=["POST"])
+@gitrepo_bp.route("/projects/syncAllData", methods=["POST"])
 @require_auth
 @require_role("instructor", "ta")
 def sync_all_commits_route():
     try:
-        result = sync_all_commitsIssues()
+        result = sync_all_data()
 
         return jsonify({
             "message": "Bulk commit sync completed",
@@ -277,3 +284,4 @@ def set_config_route():
         return jsonify(updated)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    
