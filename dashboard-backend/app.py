@@ -5,6 +5,7 @@ from config import SECRET_KEY, FRONTEND_URL
 from auth.routes import auth_bp
 from gitrepo.routes import gitrepo_bp
 from users.routes import users_bp
+from ai.routes import ai_bp
 
 
 def create_app():
@@ -18,6 +19,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(gitrepo_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(ai_bp)
 
     @app.route("/health")
     def health():

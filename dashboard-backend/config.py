@@ -9,7 +9,7 @@ CLIENT_SECRET = os.getenv("MS_CLIENT_SECRET")
 TENANT_ID = os.getenv("MS_TENANT_ID", "common")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:5000/auth/callback")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # GitLab
 GITLAB_URL = os.getenv("GITLAB_URL", "https://git.las.iastate.edu")

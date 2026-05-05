@@ -7,6 +7,56 @@ from db import DbCursor
 
 gitrepo_bp = Blueprint("gitrepo", __name__, url_prefix="/gitrepo")
 
+@gitrepo_bp.route("/debug/all", methods=["GET"])
+@require_auth
+@require_role("instructor", "ta")
+def debug_all():
+    with DbCursor() as cursor:
+        cursor.execute("""
+            SELECT id, gitlab_id, name, total_commits
+            FROM repos
+            ORDER BY name
+        """)
+        repos = cursor.fetchall()
+
+        result = []
+
+        for repo in repos:
+            cursor.execute("""
+                SELECT id, name, email, commits, additions, deletions
+                FROM contributors
+                WHERE repo_id = %s
+            """, (repo["id"],))
+            contributors = cursor.fetchall()
+
+            enriched_contributors = []
+
+            for c in contributors:
+                cursor.execute("""
+                    SELECT sha, author_name, author_email, message,
+                           additions, deletions, branch, committed_at,
+                           is_merge
+                    FROM commits
+                    WHERE repo_id = %s AND author_email = %s
+                    ORDER BY committed_at DESC
+                """, (repo["id"], c["email"]))
+                commit_history = cursor.fetchall()
+
+                enriched_contributors.append({
+                    **dict(c),
+                    "commit_history": commit_history,
+                })
+
+            result.append({
+                "id": repo["id"],
+                "gitlab_id": repo["gitlab_id"],
+                "name": repo["name"],
+                "total_commits": repo["total_commits"],
+                "contributors": enriched_contributors,
+            })
+
+    return jsonify({"repos": result})
+
 @gitrepo_bp.route("/repos", methods=["POST"])
 @require_auth
 @require_role("instructor", "ta")
