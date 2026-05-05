@@ -1,9 +1,11 @@
 import React from "react";
 import GroupCard from "./GroupviewSquare";
+import { type Score, scoreToColor, getAverageScore } from '../scoreUtils';
 
 type Student = {
   name: string;
-  quality: "excellent" | "good" | "poor";
+  commitScore: Score;
+  mergeScore: Score;
 };
 
 type Group = {
@@ -17,6 +19,7 @@ type Group = {
 type SquareGridProps = {
   groups: Group[];
 };
+
 
 const SquareGrid: React.FC<SquareGridProps> = ({ groups }) => {
   return (

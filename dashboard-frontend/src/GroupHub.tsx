@@ -5,19 +5,29 @@ import SquareGrid from "./Elements/GroupviewSquareGrid";
 import LoadingSpinner from "./Elements/LoadingSpinner";
 import api from "./services/api";
 import { useData } from "./DataProvider";
-import { useConfig } from "./ConfigContext";
+import { ConfigProvider, useConfig } from "./ConfigContext";
+import { type Score, scoreToColor, getAverageScore, scoreCommits, scoreMerges, countMergeCommitsInRange, countCommitsInRange } from './scoreUtils';
 
 const GroupHub: React.FC = () => {
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { repos, usersByRepo, loading, refresh } = useData();
+  const { repos, usersByRepo, commitsByEmail, loading, refresh } = useData();
 
   const configCtx = useConfig();
+  const config = configCtx?.config;
   const selectedDemo = configCtx?.selectedDemo ?? "Demo 1";
   const setSelectedDemo = configCtx?.setSelectedDemo ?? (() => {});
-  const options = ["Demo 1", "Demo 2", "Demo 3", "Demo 4"];
+
+  const demoRanges: Record<string, { start: string; end: string }> = {
+    "Demo 1": { start: config?.Demo1Start ?? "", end: config?.Demo1End ?? "" },
+    "Demo 2": { start: config?.Demo2Start ?? "", end: config?.Demo2End ?? "" },
+    "Demo 3": { start: config?.Demo3Start ?? "", end: config?.Demo3End ?? "" },
+    "Demo 4": { start: config?.Demo4Start ?? "", end: config?.Demo4End ?? "" },
+  };
+  const { start: demoStart, end: demoEnd } = demoRanges[selectedDemo];
+  const options = Object.keys(demoRanges);
 
   useEffect(() => {
     const handleClickOutside = () => setDropdownOpen(false);
@@ -44,15 +54,24 @@ const GroupHub: React.FC = () => {
     return "poor";
   };
 
-  const groups = repos.map((r) => ({
-    id: r.id,
-    name: r.name,
-    totalCommits: r.total_commits,
-    students: (usersByRepo[r.id] ?? []).map((u) => ({
-      name: u.name,
-      quality: getQuality(u.commits),
-    })),
-  }));
+const groups = repos.map((r) => ({
+  id: r.id,
+  name: r.name,
+  totalCommits: r.total_commits,
+  students: (usersByRepo[r.id] ?? []).map((u) => ({
+    name: u.name,
+    commitScore: scoreCommits(
+      countCommitsInRange(commitsByEmail[u.email] ?? [], demoStart, demoEnd),
+      config?.ExpectedCommitsWeekly ?? 1,
+      demoStart,
+      demoEnd,
+    ),
+    mergeScore: scoreMerges(
+      countMergeCommitsInRange(commitsByEmail[u.email] ?? [], demoStart, demoEnd),
+      config?.ExpectedMergesDemo ?? 1,
+    ),
+  })),
+}));
 
   const filtered = groups.filter((g) => {
     const q = search.trim().toLowerCase();
@@ -62,6 +81,8 @@ const GroupHub: React.FC = () => {
       g.students.some((s) => s.name.toLowerCase().includes(q))
     );
   });
+
+
 
   return (
     <div style={styles.root}>

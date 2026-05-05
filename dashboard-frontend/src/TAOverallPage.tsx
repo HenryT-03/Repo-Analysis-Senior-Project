@@ -6,6 +6,7 @@ import api from "./services/api";
 import { useParams } from "react-router-dom";
 import { ConfigProvider, useConfig } from './ConfigContext';
 import { useData } from './DataProvider';
+import { scoreCommits, scoreMerges, scoreToColor } from './scoreUtils';
 
 type TeamRow = {
   team: string;
@@ -83,26 +84,6 @@ const buildCommitChartData = (commits: any[]) => {
 
 const unknownAuthors: UnknownAuthor[] = [];
 const kotlinFiles: KotlinFile[] = [];
-
-function ratingBg(rating: TeamRow['commitRating']) {
-  if (rating === 'Outstanding') return '#bbdefb';
-  if (rating === 'Excellent') return '#c9f2cc';
-  if (rating === 'Good') return '#fff2b4';
-  return '#f5c1c1';
-}
-function commitCountBg(total: number, expected: number): string {
-  if (total === 0) return '#f5c1c1';           // red
-  if (total >= expected * 2) return '#bbdefb'; // blue
-  if (total >= expected) return '#c9f2cc';     // green
-  return '#fff2b4';                            // yellow
-}
-
-function mergeBg(merges: number, expected: number): string {
-  if (merges === 0) return '#f5c1c1';           // red
-  if (merges >= expected * 2) return '#bbdefb'; // blue
-  if (merges >= expected) return '#c9f2cc';     // green
-  return '#fff2b4';                             // yellow
-}
 
 function buildRowsFromCommits(
   commits: any[],
@@ -415,13 +396,21 @@ const filteredRows = useMemo(() => {
                       <td style={styles.cell}>{row.student}</td>
                       <td style={styles.cell}>{row.username}</td>
                       <td style={styles.cell}>{row.role}</td>
-                      <td style={{ ...styles.cell, backgroundColor: commitCountBg(row.totalCommits, (config?.ExpectedCommitsWeekly ?? 1)) }}>
+                      <td style={{ ...styles.cell, backgroundColor: scoreToColor(scoreCommits(
+                        row.totalCommits,
+                        config?.ExpectedCommitsWeekly ?? 1,
+                        demoRanges[timeRange].start,
+                        demoRanges[timeRange].end,
+                      ))}}>
                         {row.totalCommits}
                       </td>
                       <td style={styles.cell}>{row.meaningful}</td>
-                      <td style={{ ...styles.cell, backgroundColor: mergeBg(row.merge, config?.ExpectedMergesDemo ?? 1) }}>
+                      <td style={{ ...styles.cell, backgroundColor: scoreToColor(scoreMerges(
+                        row.merge,
+                        config?.ExpectedMergesDemo ?? 1,
+                      ))}}>
                         {row.merge}
-                      </td>                   
+                      </td>
                      <td style={styles.cell}>{row.trivial}</td>
                       <td style={styles.cell}>{row.linesPlusMinus}</td>
                       <td style={styles.cell}>{row.issuesCreated}</td>

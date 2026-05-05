@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { type Score, scoreToColor, getAverageScore } from '../scoreUtils';
 
 const CARDINAL = "#822433";
 
@@ -11,7 +12,8 @@ const QUALITY_COLOR: Record<"excellent" | "good" | "poor", string> = {
 
 type Student = {
   name: string;
-  quality: "excellent" | "good" | "poor";
+  commitScore: Score;
+  mergeScore: Score;
 };
 
 type SquareProps = {
@@ -59,7 +61,7 @@ const GroupCard: React.FC<SquareProps> = ({ name, id, totalCommits, students }) 
               <span
                 style={{
                   ...styles.dot,
-                  backgroundColor: QUALITY_COLOR[s.quality],
+                  backgroundColor: scoreToColor(Math.floor(getAverageScore(s.commitScore, s.mergeScore)) as Score, true),
                 }}
               />
               <span style={styles.studentName}>{s.name}</span>
