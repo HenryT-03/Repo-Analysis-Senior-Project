@@ -6,7 +6,7 @@ import LoadingSpinner from "./Elements/LoadingSpinner";
 import api from "./services/api";
 import { useData } from "./DataProvider";
 import { useConfig } from "./ConfigContext";
-import { scoreCommits, scoreMerges, countMergeCommitsInRange, countCommitsInRange } from './scoreUtils';
+import { scoreCommits, scoreMerges, countMergeCommitsInRange, countCommitsInRange, getAverageScore } from './scoreUtils';
 
 const GroupHub: React.FC = () => {
   const [search, setSearch] = useState("");
@@ -77,6 +77,15 @@ const groups = repos.map((r) => ({
     );
   });
 
+const sorted = [...filtered].sort((a, b) => {
+  const avg = (group: typeof a) =>
+    group.students.length === 0 ? 0 :
+    Math.round(
+      group.students.reduce((sum, s) => sum + getAverageScore(s.commitScore, s.mergeScore), 0)
+      / group.students.length * 10
+    ) / 10;
+  return avg(a) - avg(b);
+});
 
 
   return (
@@ -138,7 +147,7 @@ const groups = repos.map((r) => ({
           </div>
 
           {error && <p style={styles.error}>{error}</p>}
-          {loading ? <LoadingSpinner /> : <SquareGrid groups={filtered} />}
+          {loading ? <LoadingSpinner /> : <SquareGrid groups={sorted} />}
         </div>
       </div>
     </div>
