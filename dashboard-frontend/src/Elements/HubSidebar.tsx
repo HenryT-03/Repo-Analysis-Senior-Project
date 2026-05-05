@@ -24,7 +24,6 @@ const HubSidebar: React.FC = () => {
   return (
     <aside style={styles.sidebar}>
       <div style={styles.avatarSection}>
-        <div style={styles.avatar} />
         <div style={styles.userInfo}>
           <div style={styles.userName}>Repo Analysis Tool</div>
         </div>

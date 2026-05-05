@@ -320,7 +320,7 @@ const filteredRows = useMemo(() => {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.headerRow}>
-                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
+                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
                       <th key={h} style={styles.headerCell}>{h}</th>
                     ))}
                   </tr>
@@ -347,7 +347,6 @@ const filteredRows = useMemo(() => {
                       ))}}>
                         {row.merge}
                       </td>
-                     <td style={styles.cell}>{row.trivial}</td>
                       <td style={styles.cell}>{row.linesPlusMinus}</td>
                       <td style={styles.cell}>{row.issuesCreated}</td>
                       <td style={styles.cell}>{row.issuesUpdated}</td>
