@@ -60,6 +60,7 @@ const groups = repos.map((r) => ({
   totalCommits: r.total_commits,
   students: (usersByRepo[r.id] ?? []).map((u) => ({
     name: u.name,
+    commitCount: countCommitsInRange(commitsByEmail[u.email] ?? [], demoStart, demoEnd),
     commitScore: scoreCommits(
       countCommitsInRange(commitsByEmail[u.email] ?? [], demoStart, demoEnd),
       config?.ExpectedCommitsWeekly ?? 1,

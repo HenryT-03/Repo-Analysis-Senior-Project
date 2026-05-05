@@ -6,6 +6,7 @@ type Student = {
   name: string;
   commitScore: Score;
   mergeScore: Score;
+  commitCount: number;  // ADD
 };
 
 type Group = {

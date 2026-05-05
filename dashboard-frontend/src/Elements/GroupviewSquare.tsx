@@ -14,6 +14,7 @@ type Student = {
   name: string;
   commitScore: Score;
   mergeScore: Score;
+  commitCount: number;
 };
 
 type SquareProps = {
@@ -27,6 +28,22 @@ type SquareProps = {
 const GroupCard: React.FC<SquareProps> = ({ name, id, totalCommits, students }) => {
   const navigate = useNavigate();
   const [hovered, setHovered] = React.useState(false);
+
+  const demoTotalCommits = students.reduce((sum, s) => sum + s.commitCount, 0);
+const avgScore = students.length === 0 ? 0 :
+  Math.round(
+    students.reduce((sum, s) => sum + getAverageScore(s.commitScore, s.mergeScore), 0)
+    / students.length * 10
+  ) / 10;
+
+const avgScoreColor = scoreToColor(
+  Math.floor(
+    students.reduce((sum, s) => sum + getAverageScore(s.commitScore, s.mergeScore), 0)
+    / Math.max(students.length, 1)
+  ) as Score
+);
+
+  
 
   return (
     <div
@@ -47,7 +64,11 @@ const GroupCard: React.FC<SquareProps> = ({ name, id, totalCommits, students }) 
         {/* Left: commits */}
         <div style={styles.commitCol}>
           <span style={styles.metaLabel}>Commits</span>
-          <span style={styles.commitCount}>{totalCommits}</span>
+          <span style={styles.commitCount}>{demoTotalCommits}</span>
+          <span style={styles.metaLabel}>Avg Score</span>
+          <span style={{ ...styles.commitCount, backgroundColor: avgScoreColor, borderRadius: 4, padding: '2px 6px' }}>
+            {avgScore.toFixed(1)}
+          </span>
         </div>
 
         {/* Vertical separator */}
