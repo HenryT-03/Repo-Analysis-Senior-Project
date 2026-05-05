@@ -33,9 +33,11 @@ export type Repo = {
 
 type DataContextType = {
   repos: Repo[];
-  usersByRepo: Record<number, Contributor[]>;         // repoId -> contributors
-  commitsByEmail: Record<string, Commit[]>;           // email -> commits (sorted by date)
+  usersByRepo: Record<number, Contributor[]>;
+  commitsByEmail: Record<string, Commit[]>;
   loading: boolean;
+  syncing: boolean;          
+  setSyncing: (v: boolean) => void
   error: string | null;
   refresh: () => Promise<void>;
 };
@@ -45,6 +47,8 @@ const DataContext = createContext<DataContextType>({
   usersByRepo: {},
   commitsByEmail: {},
   loading: true,
+  syncing: false,             
+  setSyncing: () => {},     
   error: null,
   refresh: async () => {},
 });
@@ -55,6 +59,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [commitsByEmail, setCommitsByEmail] = useState<Record<string, Commit[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);  
 
 const load = async () => {
 setLoading(true);
@@ -115,7 +120,7 @@ setError(null);
 
   return (
     <DataContext.Provider
-      value={{ repos, usersByRepo, commitsByEmail, loading, error, refresh: load }}
+      value={{ repos, usersByRepo, commitsByEmail, loading, syncing, setSyncing, error, refresh: load }}
     >
       {children}
     </DataContext.Provider>

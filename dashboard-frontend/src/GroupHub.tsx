@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import HubSidebar from "./Elements/HubSidebar";
-import { RefreshCw, CalendarDays, ChevronDown } from 'lucide-react';
+import { CalendarDays, ChevronDown } from 'lucide-react';
 import SquareGrid from "./Elements/GroupviewSquareGrid";
 import LoadingSpinner from "./Elements/LoadingSpinner";
 import api from "./services/api";
 import { useData } from "./DataProvider";
-import { ConfigProvider, useConfig } from "./ConfigContext";
-import { type Score, scoreToColor, getAverageScore, scoreCommits, scoreMerges, countMergeCommitsInRange, countCommitsInRange } from './scoreUtils';
+import { useConfig } from "./ConfigContext";
+import { scoreCommits, scoreMerges, countMergeCommitsInRange, countCommitsInRange } from './scoreUtils';
 
 const GroupHub: React.FC = () => {
   const [search, setSearch] = useState("");
@@ -46,12 +46,6 @@ const GroupHub: React.FC = () => {
     } finally {
       setSyncing(false);
     }
-  };
-
-  const getQuality = (commits: number): "excellent" | "good" | "poor" => {
-    if (commits >= 20) return "excellent";
-    if (commits >= 5) return "good";
-    return "poor";
   };
 
 const groups = repos.map((r) => ({
@@ -141,18 +135,6 @@ const groups = repos.map((r) => ({
                 </div>
               )}
             </div>
-
-            <button
-              style={{
-                ...styles.button,
-                opacity: syncing ? 0.6 : 1,
-                pointerEvents: syncing ? "none" : "auto",
-                flexShrink: 0,
-              }}
-              onClick={handleSync}
-            >
-              <RefreshCw style={styles.icon} /> {syncing ? "Syncing..." : "Sync Repos"}
-            </button>
           </div>
 
           {error && <p style={styles.error}>{error}</p>}

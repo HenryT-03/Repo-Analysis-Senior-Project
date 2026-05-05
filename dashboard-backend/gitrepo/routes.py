@@ -212,7 +212,7 @@ def sync_projects():
     sync_all_projects()
     return jsonify({"message": "Sync completed"}), 200
 
-@gitrepo_bp.route("/projects/syncAllData", methods=["POST"])
+@gitrepo_bp.route("/syncAllData", methods=["POST"])
 @require_auth
 @require_role("instructor", "ta")
 def sync_all_commits_route():
@@ -286,8 +286,8 @@ def set_config_route():
         return jsonify({"error": str(e)}), 400
     
     
-@gitrepo_bp.route("/debug/all", methods=["GET"])
-def debug_all():
+@gitrepo_bp.route("/fetchAll", methods=["GET"])
+def fetch_all():
     """
     Fetch all projects with nested contributors and commits from the DB.
     """
@@ -369,6 +369,23 @@ def debug_all():
             },
             "repos": result,
         }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@gitrepo_bp.route("/deleteAll", methods=["DELETE"])
+def delete_all():
+    """
+    Delete all data from repos, contributors, commits, and issues tables.
+    """
+    try:
+        with DbCursor() as cursor:
+            cursor.execute("DELETE FROM commits")
+            cursor.execute("DELETE FROM issues")
+            cursor.execute("DELETE FROM contributors")
+            cursor.execute("DELETE FROM repos")
+
+        return jsonify({"message": "All data deleted successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

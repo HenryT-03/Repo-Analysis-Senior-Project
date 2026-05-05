@@ -19,8 +19,16 @@ const api = {
   
   //get all
   getAllData: async () => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/debug/all`);
+    return fetchWithAuth(`${API_BASE}/gitrepo/fetchAll`);
   },
+  deleteAllData: async () => {
+    return fetchWithAuth(`${API_BASE}/gitrepo/deleteAll`, { method: 'DELETE' });
+  },
+  syncAllData: async () => 
+  {
+    return fetchWithAuth(`${API_BASE}/gitrepo/syncAllData`, { method: 'POST' }); 
+  },
+
   // Sync Repo
   syncRepo: async (repoId: string) => {
     return fetchWithAuth(`${API_BASE}/gitrepo/projects/${repoId}/syncCommits`, { method: 'POST' });

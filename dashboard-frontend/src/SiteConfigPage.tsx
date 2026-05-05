@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import Sidebar from "./Elements/HubSidebar";
 import api from "./services/api";
 import { useConfig, type AppConfig } from "./ConfigContext";
-
+import { useData } from "./DataProvider";
 
 type Config = {
   Demo1Start: string;
@@ -18,15 +19,17 @@ type Config = {
   GITLAB_GROUP_NAME: string;
 };
 
-
 export default function SiteConfigPage() {
   const configCtx = useConfig();
   const config = configCtx?.config ?? null;
   const updateConfig = configCtx?.updateConfig;
-  const contextLoading = configCtx?.loading ?? true; 
+  const contextLoading = configCtx?.loading ?? true;
+
+  const { syncing, setSyncing, refresh } = useData();
 
   const [form, setForm] = useState<AppConfig | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -35,22 +38,57 @@ export default function SiteConfigPage() {
   }, [config]);
 
   const handleDateChange = (key: keyof Config, value: string) => {
-    setForm((prev) => prev ? { ...prev, [key]: value } : prev);
+    setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
     setSuccess(false);
   };
 
-const handleSave = async () => {
-  if (!form) return;
-  setSaving(true);
-  try {
-    await updateConfig?.(form);
-    setSuccess(true);
-  } catch {
-    setError("Failed to save config");
-  } finally {
-    setSaving(false);
-  }
-};
+  const handleSave = async () => {
+    if (!form) return;
+    setSaving(true);
+    try {
+      await updateConfig?.(form);
+      setSuccess(true);
+    } catch {
+      setError("Failed to save config");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    const confirmed = window.confirm(
+      "WARNING: This may take a very long time (about 30 min – 1 hour).\n\nRun this once during site setup — after that it runs automatically around midnight.\n\nAre you sure you want to sync all data now?"
+    );
+    if (!confirmed) return;
+
+    setSyncing(true);
+    setError(null);
+    try {
+      await api.syncAllData();
+      await refresh();        
+    } catch {
+      setError("Sync failed. Please try again.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+  const handleDeleteAll = async () => {
+    const confirmed = window.confirm(
+      "WARNING: This cannot be undone.\n\nAll data will be permanently deleted.\n\nAre you sure?"
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError(null);
+    try {
+      await api.deleteAllData();
+      await refresh();
+    } catch {
+      setError("Delete failed. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const demos = [
     { label: "Demo 1", startKey: "Demo1Start", endKey: "Demo1End" },
@@ -71,16 +109,13 @@ const handleSave = async () => {
               <p style={styles.subtitle}>Manage demo date ranges and global settings</p>
             </div>
 
-            {error && (
-              <div style={styles.errorMessage}>⚠️ {error}</div>
-            )}
-            {success && (
-              <div style={styles.successMessage}>Configuration saved successfully</div>
-            )}
+            {error && <div style={styles.errorMessage}>⚠️ {error}</div>}
+            {success && <div style={styles.successMessage}>Configuration saved successfully</div>}
+
             {contextLoading || !form ? (
-            <div style={styles.loadingMessage}>Loading config...</div>
+              <div style={styles.loadingMessage}>Loading config...</div>
             ) : (
-                  <>
+              <>
                 {/* Demo Date Ranges */}
                 <div style={styles.card}>
                   <div style={styles.cardHeader}>
@@ -125,20 +160,20 @@ const handleSave = async () => {
                     <h2 style={styles.cardTitle}>General Settings</h2>
                     <p style={styles.cardSubtitle}>Global parameters for commit analysis</p>
                   </div>
-                    <div style={styles.cardBody}>
-                        <div style={styles.fieldRow}>
-                        <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Expected Merges Per Demo</label>
-                            <input
-                            type="number"
-                            min={0}
-                            value={form.ExpectedMergesDemo}
-                            onChange={(e) => handleDateChange("ExpectedMergesDemo", e.target.value as any)}
-                            style={styles.textInput}
-                            />
-                        </div>
-                        </div>
+                  <div style={styles.cardBody}>
+                    <div style={styles.fieldRow}>
+                      <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Expected Merges Per Demo</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={form.ExpectedMergesDemo}
+                          onChange={(e) => handleDateChange("ExpectedMergesDemo", e.target.value as any)}
+                          style={styles.textInput}
+                        />
+                      </div>
                     </div>
+                  </div>
                   <div style={styles.cardBody}>
                     <div style={styles.fieldRow}>
                       <div style={styles.fieldGroup}>
@@ -160,6 +195,59 @@ const handleSave = async () => {
                           style={styles.textInput}
                         />
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data Management */}
+                <div style={styles.card}>
+                  <div style={styles.cardHeader}>
+                    <h2 style={styles.cardTitle}>Data Management</h2>
+                    <p style={styles.cardSubtitle}>Sync or reset all GitLab data</p>
+                  </div>
+                  <div style={styles.cardBody}>
+                    <div style={styles.dataManagementRow}>
+
+                      {/* Sync All */}
+                      <div style={styles.actionBlock}>
+                        <button
+                          style={{
+                            ...styles.button,
+                            opacity: syncing ? 0.6 : 1,
+                            pointerEvents: syncing ? "none" : "auto",
+                            flexShrink: 0,
+                          }}
+                          onClick={handleSyncAll}
+                        >
+                          <RefreshCw style={styles.icon} />
+                          {syncing ? "Syncing..." : "Sync All Data"}
+                        </button>
+                        <p style={styles.warningText}>
+                          ⚠ This may take 30 min – 1 hour. Run once during setup;
+                          after that it runs automatically around midnight.
+                        </p>
+                      </div>
+
+                      {/* Delete All */}
+                      <div style={styles.actionBlock}>
+                        <button
+                          style={{
+                            ...styles.button,
+                            ...styles.buttonDanger,
+                            opacity: deleting ? 0.6 : 1,
+                            pointerEvents: deleting ? "none" : "auto",
+                            flexShrink: 0,
+                          }}
+                          onClick={handleDeleteAll}
+                        >
+                          <Trash2 style={styles.icon} />
+                          {deleting ? "Deleting..." : "Delete All Data"}
+                        </button>
+                        <p style={styles.warningText}>
+                          ⚠ This cannot be undone.
+                        </p>
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -186,6 +274,27 @@ const handleSave = async () => {
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  dataManagementRow: {
+  display: "flex",
+  gap: "2rem",
+  flexWrap: "wrap" as const,
+  },
+  actionBlock: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.5rem",
+    maxWidth: 320,
+  },
+  warningText: {
+    fontSize: 13,
+    color: "#b45309",
+    margin: 0,
+    lineHeight: 1.5,
+  },
+  buttonDanger: {
+    borderColor: "#dc2626",  
+    color: "#dc2626",
+  },
   root: { display: "flex", flexDirection: "row", height: "100vh", width: "100vw", overflow: "hidden", backgroundColor: "#f0f0f0" },
   main: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
   content: { flex: 1, overflowY: "auto", padding: "16px" },
