@@ -21,28 +21,6 @@ const api = {
   getAllData: async () => {
     return fetchWithAuth(`${API_BASE}/gitrepo/debug/all`);
   },
-
-  // Repos
-  getRepos: async () => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/repos`);
-  },
-
-  // Repo Stats
-  getRepoStats: async (repoId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/repos/${repoId}/stats`);
-  },
-
-  // Repo Commits
-  getRepoCommits: async (repoId: string, params?: { start?: string; end?: string }) => {
-    const url = new URL(`${API_BASE}/gitrepo/projects/${repoId}/commits`);
-    if (params?.start) url.searchParams.set("start", params.start);
-    if (params?.end) url.searchParams.set("end", params.end);
-    return fetchWithAuth(url.toString());
-  },
-  // Repo Commits
-  getRepoContributors: async (projectId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/projects/${projectId}/contributors`);
-  },
   // Sync Repo
   syncRepo: async (repoId: string) => {
     return fetchWithAuth(`${API_BASE}/gitrepo/projects/${repoId}/syncCommits`, { method: 'POST' });

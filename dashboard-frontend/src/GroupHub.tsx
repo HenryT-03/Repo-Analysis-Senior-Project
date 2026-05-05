@@ -1,16 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import HubSidebar from "./Elements/HubSidebar";
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, CalendarDays, ChevronDown } from 'lucide-react';
 import SquareGrid from "./Elements/GroupviewSquareGrid";
 import LoadingSpinner from "./Elements/LoadingSpinner";
 import api from "./services/api";
 import { useData } from "./DataProvider";
+import { useConfig } from "./ConfigContext";
 
 const GroupHub: React.FC = () => {
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { repos, usersByRepo, loading, refresh } = useData();
+
+  const configCtx = useConfig();
+  const selectedDemo = configCtx?.selectedDemo ?? "Demo 1";
+  const setSelectedDemo = configCtx?.setSelectedDemo ?? (() => {});
+  const options = ["Demo 1", "Demo 2", "Demo 3", "Demo 4"];
+
+  useEffect(() => {
+    const handleClickOutside = () => setDropdownOpen(false);
+    if (dropdownOpen) document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [dropdownOpen]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -63,6 +76,50 @@ const GroupHub: React.FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               style={{ ...styles.search, marginBottom: 0, flex: 1 }}
             />
+
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <button
+                style={styles.button}
+                onClick={(e) => { e.stopPropagation(); setDropdownOpen((o) => !o); }}
+              >
+                <CalendarDays style={styles.icon} />
+                {selectedDemo}
+                <ChevronDown style={{ width: 14, height: 14 }} />
+              </button>
+              {dropdownOpen && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  right: 0,
+                  backgroundColor: "#822433",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  zIndex: 100,
+                  minWidth: "100%",
+                }}>
+                  {options.map((opt) => (
+                    <div
+                      key={opt}
+                      onClick={() => { setSelectedDemo(opt); setDropdownOpen(false); }}
+                      style={{
+                        padding: "8px 12px",
+                        color: "white",
+                        fontFamily: "monospace",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        backgroundColor: selectedDemo === opt ? "rgba(0,0,0,0.2)" : "transparent",
+                        whiteSpace: "nowrap",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.15)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = selectedDemo === opt ? "rgba(0,0,0,0.2)" : "transparent")}
+                    >
+                      {opt}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
               style={{
                 ...styles.button,
@@ -77,7 +134,6 @@ const GroupHub: React.FC = () => {
           </div>
 
           {error && <p style={styles.error}>{error}</p>}
-
           {loading ? <LoadingSpinner /> : <SquareGrid groups={filtered} />}
         </div>
       </div>

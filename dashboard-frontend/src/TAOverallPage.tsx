@@ -226,7 +226,8 @@ export default function TAOverallViewPage() {
   const config = configCtx?.config;
 
   const [search, setSearch] = useState('');
-  const [timeRange, setTimeRange] = useState("Demo 1");
+  const timeRange = configCtx?.selectedDemo ?? "Demo 1";
+  const setTimeRange = configCtx?.setSelectedDemo ?? (() => {});
   const { repos, usersByRepo, commitsByEmail, loading, refresh } = useData();
 
   const demoRanges: Record<string, { start: string; end: string }> = {
@@ -247,7 +248,6 @@ export default function TAOverallViewPage() {
   const { id } = useParams();
 
 
-// Initiating demo selection
 useEffect(() => {
   const handleClickOutside = () => setDropdownOpen(false);
   if (dropdownOpen) document.addEventListener("click", handleClickOutside);
@@ -260,7 +260,6 @@ useEffect(() => {
   const { start, end } = demoRanges[timeRange];
   const contributors = usersByRepo[Number(selectedRepoId)] ?? [];
 
-  // Only grab commits for emails that belong to this repo's contributors
   const repoEmails = new Set(contributors.map((c) => c.email).filter(Boolean));
 
   const repoCommits = [...repoEmails]

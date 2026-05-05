@@ -18,6 +18,7 @@ type Config = {
   GITLAB_GROUP_NAME: string;
 };
 
+
 export default function SiteConfigPage() {
   const configCtx = useConfig();
   const config = configCtx?.config ?? null;

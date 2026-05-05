@@ -19,6 +19,8 @@ type ConfigContextType = {
   config: AppConfig | null;
   loading: boolean;
   error: string | null;
+  selectedDemo: string;
+  setSelectedDemo: (demo: string) => void;
   updateConfig: (updates: Partial<AppConfig>) => Promise<void>;
 };
 
@@ -26,6 +28,8 @@ const ConfigContext = createContext<ConfigContextType>({
   config: null,
   loading: true,
   error: null,
+  selectedDemo: "Demo1",
+  setSelectedDemo: () => {},
   updateConfig: async () => {},
 });
 
@@ -33,6 +37,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDemo, setSelectedDemo] = useState("Demo 1");
 
   useEffect(() => {
     api.getConfig()
@@ -47,7 +52,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   return (
-    <ConfigContext.Provider value={{ config, loading, error, updateConfig }}>
+  <ConfigContext.Provider value={{ config, updateConfig, loading, error, selectedDemo, setSelectedDemo }}>
       {children}
     </ConfigContext.Provider>
   );
