@@ -320,7 +320,7 @@ const filteredRows = useMemo(() => {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.headerRow}>
-                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
+                    {['Team', 'Student', 'Username', 'Total Commits', 'Meaningful', 'Merge', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
                       <th key={h} style={styles.headerCell}>{h}</th>
                     ))}
                   </tr>
@@ -331,7 +331,6 @@ const filteredRows = useMemo(() => {
                       <td style={styles.cell}>{row.team}</td>
                       <td style={styles.cell}>{row.student}</td>
                       <td style={styles.cell}>{row.username}</td>
-                      <td style={styles.cell}>{row.role}</td>
                       <td style={{ ...styles.cell, backgroundColor: scoreToColor(scoreCommits(
                         row.totalCommits,
                         config?.ExpectedCommitsWeekly ?? 1,
