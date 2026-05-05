@@ -353,11 +353,11 @@ def debug_all():
                     "commit_history": commits_by_email.get((internal_id, email), []),
                 })
             result.append({
-                "id": repo_id,
+                "id": gitlab_id,           
                 "name": repo["name"],
                 "total_commits": repo["total_commits"],
                 "contributors": nested_contributors,
-                "issues": issues_by_repo.get(repo_id, []),
+                "issues": issues_by_repo.get(gitlab_id, []),
             })
 
         return jsonify({
