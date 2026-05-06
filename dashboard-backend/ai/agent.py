@@ -45,7 +45,7 @@ def _get_client() -> genai.Client:
     return _client
 
 
-MODEL_ID = "gemini-2.5-flash"
+MODEL_ID = "gemini-2.5-flash-lite"
 
 # ---------------------------------------------------------------------------
 # Available actions registry (same pattern as the scaffold)
