@@ -1,9 +1,9 @@
 import React from "react";
 import GroupCard from "./GroupviewSquare";
+import type { Score } from "./scoring";
 
 type Student = {
   name: string;
-  quality: "excellent" | "good" | "poor";
 };
 
 type Group = {
@@ -11,6 +11,7 @@ type Group = {
   name: string;
   totalCommits: number;
   students: Student[];
+  teamScore: Score | null;
   onClick?: () => void;
 };
 
@@ -28,7 +29,8 @@ const SquareGrid: React.FC<SquareGridProps> = ({ groups }) => {
           name={group.name}
           totalCommits={group.totalCommits}
           students={group.students}
-          onClick={group.onClick} 
+          teamScore={group.teamScore}
+          onClick={group.onClick}
         />
       ))}
     </div>
@@ -43,7 +45,5 @@ const styles = {
     padding: "16px",
   },
 };
-
-
 
 export default SquareGrid;
