@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 _client = None
 
-MODEL_ID = os.getenv("GEMINI_MODEL_ID", "gemini-2.5-flash")
+MODEL_ID = os.getenv("GEMINI_MODEL_ID", "gemini-2.5-flash-lite")
 
 
 def _get_client():
