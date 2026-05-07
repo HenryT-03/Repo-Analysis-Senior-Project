@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from dotenv import load_dotenv
 from config import SECRET_KEY, FRONTEND_URL
 
 from auth.routes import auth_bp
@@ -9,6 +10,8 @@ from ai.routes import ai_bp
 
 
 def create_app():
+    # Load environment variables from .env file
+    load_dotenv()
     app = Flask(__name__)
     app.secret_key = SECRET_KEY
 

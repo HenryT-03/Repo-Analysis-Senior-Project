@@ -77,7 +77,7 @@ const GroupHub: React.FC = () => {
     setError(null);
 
     try {
-      const result = await api.runTeamAnalysis(repoId);
+      const result = await api.runTeamAnalysis(repoId, selectedDemo);
       const team = result.team;
 
       if (!team) {

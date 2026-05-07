@@ -320,6 +320,30 @@ def fetch_projects():
         "data": result
     })
 
+@gitrepo_bp.route("/user/repos", methods=["GET"])
+@require_auth
+def get_user_repos():
+    """Get repos that the current user is a contributor to."""
+    user_email = g.user["email"]
+
+    with DbCursor() as cursor:
+        # For instructors and TAs, return all repos
+        if g.user["role"] in ("instructor", "ta"):
+            cursor.execute("SELECT id, name, total_commits FROM repos ORDER BY name")
+            repos = cursor.fetchall()
+        else:
+            # For students, only return repos they contribute to
+            cursor.execute("""
+                SELECT DISTINCT r.id, r.name, r.total_commits
+                FROM repos r
+                JOIN contributors c ON r.id = c.repo_id
+                WHERE c.email = %s
+                ORDER BY r.name
+            """, (user_email,))
+            repos = cursor.fetchall()
+
+    return jsonify(repos)
+
 @gitrepo_bp.route("/config", methods=["GET"])
 def get_config_route():
     return jsonify(get_config())

@@ -1,165 +1,104 @@
 const API_BASE = "http://localhost:5000";
 
-async function fetchWithAuth(url: string, options: RequestInit = {}) {
+async function fetchWithAuth(path: string, options: RequestInit = {}) {
   const token = localStorage.getItem("token");
 
-  const headers = {
-    ...options.headers,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers ?? {}),
+    },
+  });
 
-  const response = await fetch(url, { ...options, headers });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Request failed: ${response.status} ${errorText}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Request failed: ${res.status} ${text}`);
   }
 
-  return response.json();
+  if (res.status === 204) return null;
+
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-export type AiDimension = {
-  score: number;
-  rationale: string;
-};
-
-export type AiIndividualScore = {
-  author_email: string;
-  author_name?: string;
-  repo_id: number;
-  total_score: number;
-  dimensions: Record<string, AiDimension>;
-  flags: string[];
-  summary: string;
-  raw_stats?: Record<string, unknown>;
-  analysed_at?: string;
-};
-
-export type AiTeamScore = {
-  repo_id: number;
-  team_score: number;
-  member_scores: { email: string; name?: string; score: number }[];
-  team_flags: string[];
-  team_summary: string;
-  source?: string;
-  raw_stats?: Record<string, unknown>;
-  analysed_at?: string;
-  individual_scores?: AiIndividualScore[];
-};
-
-export type AiTeamAnalysisResponse = {
-  team: AiTeamScore;
-  individuals: AiIndividualScore[];
-};
 
 export type AllTeamScores = {
   repo_id: number;
-  repo_name: string;
   team_score: number;
   summary: string;
-  analysed_at: string;
 }[];
 
-// ── API object ─────────────────────────────────────────────────────────────
-
 const api = {
-  // ── Data ────────────────────────────────────────────────────────────────
-
-  getAllData: async () => fetchWithAuth(`${API_BASE}/gitrepo/debug/all`),
-
-  syncRepo: async (repoId: string | number) =>
-    fetchWithAuth(`${API_BASE}/gitrepo/projects/${repoId}/syncCommits`, {
-      method: "POST",
-    }),
-
-  syncAllRepos: async () =>
-    fetchWithAuth(`${API_BASE}/gitrepo/syncProjects`, {
-      method: "POST",
-    }),
-
-  getConfig: async () => fetchWithAuth(`${API_BASE}/gitrepo/config`),
-
-  setConfig: async (data: Record<string, unknown>) =>
-    fetchWithAuth(`${API_BASE}/gitrepo/config`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }),
-
-  // ── Auth ────────────────────────────────────────────────────────────────
-
-  signup: async (email: string, password: string, name: string) => {
-    const response = await fetch(`${API_BASE}/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Signup failed");
-    }
-
-    return response.json();
+  async getConfig() {
+    return fetchWithAuth("/gitrepo/config");
   },
 
-  login: async (email: string, password: string) => {
-    const response = await fetch(`${API_BASE}/auth/login`, {
+  async setConfig(updates: any) {
+    return fetchWithAuth("/gitrepo/config", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(updates),
     });
-
-    if (!response.ok) {
-      throw new Error("Login failed");
-    }
-
-    return response.json();
   },
 
-  // ── AI Analysis ─────────────────────────────────────────────────────────
+  async getAllData() {
+    return fetchWithAuth("/gitrepo/debug/all");
+  },
 
-  runTeamAnalysis: async (
-    repoId: number | string
-  ): Promise<AiTeamAnalysisResponse> =>
-    fetchWithAuth(`${API_BASE}/ai/repos/${repoId}/analyse`, {
+  async syncAllRepos() {
+    return fetchWithAuth("/gitrepo/sync", {
       method: "POST",
-    }),
+    });
+  },
 
-  runTeamAnalysisLocal: async (
-    repoId: number | string
-  ): Promise<AiTeamAnalysisResponse> =>
-    fetchWithAuth(`${API_BASE}/ai/repos/${repoId}/analyse-local`, {
+  async syncRepo(repoId: string | number) {
+    return fetchWithAuth(`/gitrepo/repos/${repoId}/sync`, {
       method: "POST",
-    }),
+    });
+  },
 
-  runContributorAnalysis: async (
-    repoId: number | string,
-    authorEmail: string
-  ): Promise<AiIndividualScore> =>
-    fetchWithAuth(
-      `${API_BASE}/ai/repos/${repoId}/contributors/${encodeURIComponent(
-        authorEmail
-      )}/analyse`,
-      { method: "POST" }
-    ),
+  async getRepoCommits(
+    repoId: string | number,
+    range?: { start?: string; end?: string }
+  ) {
+    const params = new URLSearchParams();
 
-  getTeamScore: async (repoId: number | string): Promise<AiTeamScore> =>
-    fetchWithAuth(`${API_BASE}/ai/repos/${repoId}/score`),
+    if (range?.start) params.set("start", range.start);
+    if (range?.end) params.set("end", range.end);
 
-  getContributorScore: async (
-    repoId: number | string,
-    authorEmail: string
-  ): Promise<AiIndividualScore> =>
-    fetchWithAuth(
-      `${API_BASE}/ai/repos/${repoId}/contributors/${encodeURIComponent(
-        authorEmail
-      )}/score`
-    ),
+    const qs = params.toString() ? `?${params.toString()}` : "";
 
-  getAllTeamScores: async (): Promise<AllTeamScores> =>
-    fetchWithAuth(`${API_BASE}/ai/scores/all`),
+    return fetchWithAuth(`/gitrepo/repos/${repoId}/commits${qs}`);
+  },
+
+  async getAllTeamScores(): Promise<AllTeamScores> {
+    return fetchWithAuth("/ai/scores/all");
+  },
+
+  async runTeamAnalysis(repoId: number, demo?: string) {
+    const params = new URLSearchParams();
+
+    if (demo) params.set("demo", demo);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    return fetchWithAuth(`/ai/repos/${repoId}/analyse${qs}`, {
+      method: "POST",
+    });
+  },
+
+  async runTeamAnalysisLocal(repoId: number, demo?: string) {
+    const params = new URLSearchParams();
+
+    if (demo) params.set("demo", demo);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    return fetchWithAuth(`/ai/repos/${repoId}/analyse-local${qs}`, {
+      method: "POST",
+    });
+  },
 };
 
 export default api;

@@ -28,7 +28,7 @@ export default function LoginPage() {
           color: "#333",
         }}
       >
-        Sign in with Microsoft
+        Sign in
       </button>
     </div>
   );
