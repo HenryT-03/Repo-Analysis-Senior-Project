@@ -277,7 +277,7 @@ def analyse_team_local(
     common_flags = Counter(all_flags).most_common(5)
 
     team_summary = (
-        f"Local deterministic analysis scored this repo {team_score}/100. "
+        f"Local analysis scored this repo {team_score}/100. "
         f"The team has {len(individuals)} contributors, {total_commits} commits, "
         f"+{total_additions}/-{total_deletions} total changed lines. "
     )

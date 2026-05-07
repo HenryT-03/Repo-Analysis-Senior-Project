@@ -1,6 +1,9 @@
 # Environment variables
 .env
 .env.local
+**/.env
+**/.env.local
+dashboard-backend/.env
 
 # Python
 __pycache__/
