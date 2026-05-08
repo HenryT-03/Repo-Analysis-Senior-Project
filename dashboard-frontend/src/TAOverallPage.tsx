@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Search, ChevronDown, CalendarDays } from 'lucide-react';
+import { Search, RefreshCw, ChevronDown, CalendarDays } from 'lucide-react';
 import Sidebar from "./Elements/HubSidebar";
 import CommitGraph from "./Elements/CommitGraph";
+import api from "./services/api";
 import { useParams } from "react-router-dom";
-import { useConfig } from './ConfigContext';
+import { ConfigProvider, useConfig } from './ConfigContext';
 import { useData } from './DataProvider';
 import { scoreCommits, scoreMerges, scoreToColor } from './scoreUtils';
 
@@ -27,6 +28,43 @@ type TeamRow = {
   autoNotes?: string;
 };
 
+type UnknownAuthor = {
+  team: string;
+  sha: string;
+  author: string;
+  email: string;
+  message: string;
+  date: string;
+};
+
+type KotlinFile = {
+  team: string;
+  filePath: string;
+};
+
+const CARDINAL = '#822433';
+const LIGHT_CARDINAL = '#f7e8eb';
+const GRID = '#d7d7d7';
+
+const summaryRows: TeamRow[] = [
+  {
+    team: '5_mh_1', student: 'Thakker, Fioni', username: 'fioni', role: 'BE', totalCommits: 5, meaningful: 5, merge: 0, trivial: 0,
+    commitRating: 'Excellent', linesPlusMinus: '+5064/-895', mergedToMain: 'YES', issuesCreated: 8, issuesUpdated: 4, branches: 'YES', isKotlin: 'NO', feBeConsist: 'NO', autoNotes: 'All commits in Experiments/ or main'
+  },
+  {
+    team: '5_mh_1', student: 'Deshmukh, Deesha', username: 'ddeesha7', role: 'BE', totalCommits: 5, meaningful: 5, merge: 0, trivial: 0,
+    commitRating: 'Excellent', linesPlusMinus: '+6045/-3340', mergedToMain: 'YES', issuesCreated: 4, issuesUpdated: 4, branches: 'YES', isKotlin: 'NO', feBeConsist: 'NO', autoNotes: 'All commits in Experiments/ or main'
+  },
+  {
+    team: '5_mh_1', student: 'Alqahtani, Joud', username: 'joud', role: 'FE', totalCommits: 2, meaningful: 2, merge: 0, trivial: 0,
+    commitRating: 'Good', linesPlusMinus: '+3284/-0', mergedToMain: 'YES', issuesCreated: 2, issuesUpdated: 3, branches: 'YES', isKotlin: 'NO', feBeConsist: 'NO', autoNotes: 'All commits in Experiments/ or main'
+  },
+  {
+    team: '5_mh_1', student: 'Almutairi, Mary', username: 'maryam1', role: 'FE', totalCommits: 7, meaningful: 6, merge: 1, trivial: 0,
+    commitRating: 'Excellent', linesPlusMinus: '+75295/-73068', mergedToMain: 'YES', issuesCreated: 8, issuesUpdated: 7, branches: 'YES', isKotlin: 'NO', feBeConsist: 'NO', autoNotes: ''
+  },
+];
+
 const buildCommitChartData = (commits: any[]) => {
   const timeMap: Record<string, Record<string, number>> = {};
 
@@ -43,6 +81,9 @@ const buildCommitChartData = (commits: any[]) => {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([time, data]) => ({ time, ...data }));
 };
+
+const unknownAuthors: UnknownAuthor[] = [];
+const kotlinFiles: KotlinFile[] = [];
 
 function buildRowsFromCommits(
   commits: any[],
@@ -168,7 +209,7 @@ export default function TAOverallViewPage() {
   const [search, setSearch] = useState('');
   const timeRange = configCtx?.selectedDemo ?? "Demo 1";
   const setTimeRange = configCtx?.setSelectedDemo ?? (() => {});
-  const { repos, usersByRepo, commitsByEmail, loading } = useData();
+  const { repos, usersByRepo, commitsByEmail, loading, refresh } = useData();
 
   const demoRanges: Record<string, { start: string; end: string }> = {
     "Demo 1": { start: config?.Demo1Start ?? "", end: config?.Demo1End ?? "" },
@@ -179,11 +220,13 @@ export default function TAOverallViewPage() {
   const options = Object.keys(demoRanges);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { repoId: selectedRepoId } = useParams();
-  const [error] = useState<string | null>(null);
+  const [attemptingSync, setAttemptingSync] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<TeamRow[]>([]);
   const [commitData, setCommitData] = useState<any[]>([]);
   const expectedCommits = config?.ExpectedCommitsWeekly ?? 1;
   const expectedMerges = config?.ExpectedMergesDemo ?? 1;
+  const { id } = useParams();
 
 
 useEffect(() => {
@@ -260,6 +303,27 @@ const filteredRows = useMemo(() => {
                   style={styles.searchInput}
                 />
               </div>
+              <button 
+                style={{
+                  ...styles.button,
+                  opacity: loading ? 0.6 : 1,
+                  pointerEvents: loading ? 'none' : 'auto'
+                }}
+              onClick={async () => {
+                if (!selectedRepoId) return;
+                setAttemptingSync(true);
+                try {
+                  await api.syncRepo(selectedRepoId);
+                  await refresh(); 
+                } catch (err) {
+                  setError("Failed to sync repo");
+                } finally {
+                  setAttemptingSync(false);
+                }
+              }}
+              >
+                <RefreshCw style={styles.icon} /> {attemptingSync ? 'Syncing...' : 'Refresh'}
+              </button>
               <div style={{ position: "relative" }}>
                   <button
                     style={styles.button}
@@ -320,7 +384,7 @@ const filteredRows = useMemo(() => {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.headerRow}>
-                    {['Team', 'Student', 'Username', 'Total Commits', 'Meaningful', 'Merge', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
+                    {['Team', 'Student', 'Username', 'Role', 'Total Commits', 'Meaningful', 'Merge', 'Trivial', 'Lines +/-', 'Issues Created', 'Issues Updated', 'Auto-Notes'].map((h) => (
                       <th key={h} style={styles.headerCell}>{h}</th>
                     ))}
                   </tr>
@@ -331,6 +395,7 @@ const filteredRows = useMemo(() => {
                       <td style={styles.cell}>{row.team}</td>
                       <td style={styles.cell}>{row.student}</td>
                       <td style={styles.cell}>{row.username}</td>
+                      <td style={styles.cell}>{row.role}</td>
                       <td style={{ ...styles.cell, backgroundColor: scoreToColor(scoreCommits(
                         row.totalCommits,
                         config?.ExpectedCommitsWeekly ?? 1,
@@ -346,6 +411,7 @@ const filteredRows = useMemo(() => {
                       ))}}>
                         {row.merge}
                       </td>
+                     <td style={styles.cell}>{row.trivial}</td>
                       <td style={styles.cell}>{row.linesPlusMinus}</td>
                       <td style={styles.cell}>{row.issuesCreated}</td>
                       <td style={styles.cell}>{row.issuesUpdated}</td>

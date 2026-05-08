@@ -1,76 +1,104 @@
-const API_BASE = 'http://localhost:5000';
+const API_BASE = "http://localhost:5000";
 
-// Helper function to include Authorization header
-async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const token = localStorage.getItem('token'); // Make sure your login stores token here
-  const headers = {
-    ...options.headers,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-  const response = await fetch(url, { ...options, headers });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Request failed: ${response.status} ${errorText}`);
+async function fetchWithAuth(path: string, options: RequestInit = {}) {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers ?? {}),
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Request failed: ${res.status} ${text}`);
   }
-  return response.json();
+
+  if (res.status === 204) return null;
+
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
+export type AllTeamScores = {
+  repo_id: number;
+  team_score: number;
+  summary: string;
+}[];
+
 const api = {
-  
-  //get all
-  getAllData: async () => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/fetchAll`);
-  },
-  deleteAllData: async () => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/deleteAll`, { method: 'DELETE' });
-  },
-  syncAllData: async () => 
-  {
-    return fetchWithAuth(`${API_BASE}/gitrepo/syncAllData`, { method: 'POST' }); 
+  async getConfig() {
+    return fetchWithAuth("/gitrepo/config");
   },
 
-  // Sync Repo
-  syncRepo: async (repoId: string) => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/projects/${repoId}/syncCommits`, { method: 'POST' });
-  },
-  syncAllRepos: async () => 
-    {
-      return fetchWithAuth(`${API_BASE}/gitrepo/syncProjects`, { method: 'POST'})
-    },
-
-  // Config routes
-  getConfig: async () => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/config`);
-  },
-  setConfig: async (data: Record<string, any>) => {
-    return fetchWithAuth(`${API_BASE}/gitrepo/config`, {
+  async setConfig(updates: any) {
+    return fetchWithAuth("/gitrepo/config", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(updates),
     });
   },
 
-  // Auth routes (no auth header needed)
-  signup: async (email: string, password: string, name: string) => {
-    const response = await fetch(`${API_BASE}/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name })
-    });
-    if (!response.ok) throw new Error('Signup failed');
-    return response.json();
+  async getAllData() {
+    return fetchWithAuth("/gitrepo/debug/all");
   },
 
-  login: async (email: string, password: string) => {
-    const response = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+  async syncAllRepos() {
+    return fetchWithAuth("/gitrepo/sync", {
+      method: "POST",
     });
-    if (!response.ok) throw new Error('Login failed');
-    return response.json();
-  }
-  
+  },
+
+  async syncRepo(repoId: string | number) {
+    return fetchWithAuth(`/gitrepo/repos/${repoId}/sync`, {
+      method: "POST",
+    });
+  },
+
+  async getRepoCommits(
+    repoId: string | number,
+    range?: { start?: string; end?: string }
+  ) {
+    const params = new URLSearchParams();
+
+    if (range?.start) params.set("start", range.start);
+    if (range?.end) params.set("end", range.end);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    return fetchWithAuth(`/gitrepo/repos/${repoId}/commits${qs}`);
+  },
+
+  async getAllTeamScores(): Promise<AllTeamScores> {
+    return fetchWithAuth("/ai/scores/all");
+  },
+
+  async runTeamAnalysis(repoId: number, demo?: string) {
+    const params = new URLSearchParams();
+
+    if (demo) params.set("demo", demo);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    return fetchWithAuth(`/ai/repos/${repoId}/analyse${qs}`, {
+      method: "POST",
+    });
+  },
+
+  async runTeamAnalysisLocal(repoId: number, demo?: string) {
+    const params = new URLSearchParams();
+
+    if (demo) params.set("demo", demo);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    return fetchWithAuth(`/ai/repos/${repoId}/analyse-local${qs}`, {
+      method: "POST",
+    });
+  },
 };
 
 export default api;

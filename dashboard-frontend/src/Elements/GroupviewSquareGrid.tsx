@@ -1,12 +1,9 @@
 import React from "react";
 import GroupCard from "./GroupviewSquare";
-import { type Score, scoreToColor, getAverageScore } from '../scoreUtils';
+import type { Score } from "./scoring";
 
 type Student = {
   name: string;
-  commitScore: Score;
-  mergeScore: Score;
-  commitCount: number;  // ADD
 };
 
 type Group = {
@@ -14,13 +11,13 @@ type Group = {
   name: string;
   totalCommits: number;
   students: Student[];
+  teamScore: Score | null;
   onClick?: () => void;
 };
 
 type SquareGridProps = {
   groups: Group[];
 };
-
 
 const SquareGrid: React.FC<SquareGridProps> = ({ groups }) => {
   return (
@@ -32,7 +29,8 @@ const SquareGrid: React.FC<SquareGridProps> = ({ groups }) => {
           name={group.name}
           totalCommits={group.totalCommits}
           students={group.students}
-          onClick={group.onClick} 
+          teamScore={group.teamScore}
+          onClick={group.onClick}
         />
       ))}
     </div>
@@ -47,7 +45,5 @@ const styles = {
     padding: "16px",
   },
 };
-
-
 
 export default SquareGrid;

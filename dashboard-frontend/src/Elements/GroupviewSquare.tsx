@@ -1,20 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { type Score, scoreToColor, getAverageScore } from '../scoreUtils';
+import type { Score } from "./scoring";
 
 const CARDINAL = "#822433";
 
-const QUALITY_COLOR: Record<"excellent" | "good" | "poor", string> = {
-  excellent: "#2e7d32",
-  good: "#f9a825",
-  poor: "#c62828",
-};
-
 type Student = {
   name: string;
-  commitScore: Score;
-  mergeScore: Score;
-  commitCount: number;
 };
 
 type SquareProps = {
@@ -22,41 +13,39 @@ type SquareProps = {
   id: number;
   totalCommits: number;
   students: Student[];
+  teamScore: Score | null;
   onClick?: () => void;
 };
 
-const GroupCard: React.FC<SquareProps> = ({ name, id, totalCommits, students }) => {
+const GroupCard: React.FC<SquareProps> = ({ name, id, totalCommits, students, teamScore }) => {
   const navigate = useNavigate();
   const [hovered, setHovered] = React.useState(false);
-
-  const demoTotalCommits = students.reduce((sum, s) => sum + s.commitCount, 0);
-const avgScore = students.length === 0 ? 0 :
-  Math.round(
-    students.reduce((sum, s) => sum + getAverageScore(s.commitScore, s.mergeScore), 0)
-    / students.length * 10
-  ) / 10;
-
-const avgScoreColor = scoreToColor(
-  Math.floor(
-    students.reduce((sum, s) => sum + getAverageScore(s.commitScore, s.mergeScore), 0)
-    / Math.max(students.length, 1)
-  ) as Score
-);
-
-  
 
   return (
     <div
       style={{
         ...styles.card,
+        borderColor: teamScore ? teamScore.color : CARDINAL,
         ...(hovered ? styles.cardHover : {}),
       }}
       onClick={() => navigate(`/group/${id}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Header */}
-      <span style={styles.label}>{name}</span>
+      {/* Header: name + team score badge */}
+      <div style={styles.titleRow}>
+        <span style={styles.label}>{name}</span>
+        {teamScore ? (
+          <span style={{ ...styles.scoreBadge, backgroundColor: teamScore.color }}>
+            {teamScore.label} · {teamScore.points}
+          </span>
+        ) : (
+          <span style={{ ...styles.scoreBadge, backgroundColor: "#bbb" }}>
+            No data
+          </span>
+        )}
+      </div>
+
       <div style={styles.divider} />
 
       {/* Two-column body */}
@@ -64,27 +53,19 @@ const avgScoreColor = scoreToColor(
         {/* Left: commits */}
         <div style={styles.commitCol}>
           <span style={styles.metaLabel}>Commits</span>
-          <span style={styles.commitCount}>{demoTotalCommits}</span>
-          <span style={styles.metaLabel}>Avg Score</span>
-          <span style={{ ...styles.commitCount, backgroundColor: avgScoreColor, borderRadius: 4, padding: '2px 6px' }}>
-            {avgScore.toFixed(1)}
+          <span style={{ ...styles.commitCount, color: teamScore ? teamScore.color : CARDINAL }}>
+            {totalCommits}
           </span>
         </div>
 
         {/* Vertical separator */}
         <div style={styles.vDivider} />
 
-        {/* Right: students */}
+        {/* Right: students (names only — score is shown at team level) */}
         <div style={styles.studentCol}>
           <span style={styles.metaLabel}>Students</span>
           {students.map((s) => (
             <div key={s.name} style={styles.studentRow}>
-              <span
-                style={{
-                  ...styles.dot,
-                  backgroundColor: scoreToColor(Math.floor(getAverageScore(s.commitScore, s.mergeScore)) as Score, true),
-                }}
-              />
               <span style={styles.studentName}>{s.name}</span>
             </div>
           ))}
@@ -104,17 +85,37 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    transition: "box-shadow 0.15s, background-color 0.15s",
+    transition: "box-shadow 0.15s, background-color 0.15s, border-color 0.15s",
   },
   cardHover: {
     backgroundColor: "#e8d8dc",
     boxShadow: `0 4px 16px rgba(130,36,51,0.18)`,
+  },
+  titleRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "8px",
   },
   label: {
     fontFamily: "'Courier New', Courier, monospace",
     fontSize: "1.1rem",
     fontWeight: "bold",
     color: CARDINAL,
+    flex: 1,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+  },
+  scoreBadge: {
+    fontFamily: "'Courier New', Courier, monospace",
+    fontSize: "0.7rem",
+    fontWeight: "bold",
+    color: "white",
+    padding: "2px 8px",
+    borderRadius: "999px",
+    whiteSpace: "nowrap" as const,
+    flexShrink: 0,
   },
   divider: {
     borderTop: `1px solid rgba(130,36,51,0.2)`,
@@ -136,7 +137,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Courier New', Courier, monospace",
     fontSize: "1.6rem",
     fontWeight: "bold",
-    color: CARDINAL,
     lineHeight: 1,
   },
   metaLabel: {
@@ -162,13 +162,6 @@ const styles: Record<string, React.CSSProperties> = {
   studentRow: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-  },
-  dot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    flexShrink: 0,
   },
   studentName: {
     fontFamily: "'Courier New', Courier, monospace",
